@@ -1,0 +1,12 @@
+What it does:
+  1.has typeSrf and Type mesh
+  2.can assign surface to typeSrf
+  3.can update each type by selecting pre build files
+
+TODO:
+  1.select pre select surface and assign to type
+  2.figure out save data management
+  3.make UI to save preference
+  
+Questions:
+    should I combine basetype to engine?
