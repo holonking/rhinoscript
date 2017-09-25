@@ -7,19 +7,26 @@ import clr
 clr.AddReference("Eto")
 clr.AddReference("Rhino.UI")
 from Rhino.UI import *
-from Eto.Forms import Form, Dialog, Label, TabControl, ComboBox, TabPage, TextBox, StackLayout, StackLayoutItem, Orientation, Button, HorizontalAlignment, MessageBox
+from Eto.Forms import Form,Panel,Dialog, Label, TabControl, ComboBox, TabPage, TextBox, StackLayout, StackLayoutItem, Orientation, Button, HorizontalAlignment, MessageBox
 from Eto.Drawing import *
 import os
 import rsTools
 reload(rsTools)
 from rsTools import *
 
+class DataPainter(Panel):
+
+    def OnPaint(self,e):
+        print('from DataPainter.OnPaint:',e)
+    def MouseDown(self,e):
+        print('from DataPainter.MouseDOwn:',e)
+
 
 class MainForm(Form):
     def __init__(self):
         #super(Form,self).__init__(*args, **kwargs)
         # Form.Resizable=True
-        self.Size=Size(300,600)
+        self.Size=Size(1000,600)
         #call initUI from outside and pass an engine to it
         #self.initUI()
 
@@ -27,7 +34,14 @@ class MainForm(Form):
     def initUI(self,engine):
         self.engine=engine
         tabControl=TabControl()
-        layMain=StackLayout(Spacing = 2, Orientation = Orientation.Vertical)
+        layMainH=StackLayout(Spacing=0,Orientation=Orientation.Horizontal)
+        layMainV=StackLayout(Spacing = 2, Orientation = Orientation.Vertical)
+
+        self.drawPanel=DataPainter()
+        self.drawPanel.Size=Size(600,600)
+
+        self.tabPanel=Panel()
+        self.tabPanel.Size=Size(300,600)
 
 
         #control groups
@@ -47,7 +61,14 @@ class MainForm(Form):
         tabControl.Pages.Add(self.page_GENTYPESRF)
         tabControl.Pages.Add(self.page_GENTYPEMESH)
 
-        self.Content=tabControl
+        #self.Content=tabControl
+        layMainH.Items.Add(self.tabPanel)
+        layMainH.Items.Add(self.drawPanel)
+        #self.Controls.Add
+        self.tabPanel.Content=tabControl
+        self.Content=layMainH
+        #self.Controls.Add(layMainH)
+
         self.gen_GENBLOCK()
         self.gen_GENTYPESRF_row()
 

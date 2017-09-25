@@ -13,7 +13,8 @@ from Deploy_BaseTypes import *
 VIEWMODE=None
 # PATH_PATTERN='./FacadePatterns/'
 ROOT='/Users/holonking/Documents/Scripts/Rhinoscript/CladdingManagerDemo'
-PATH_PATTERN=ROOT+'/FacadePatterns/'
+#PATH_PATTERN=ROOT+'/FacadePatterns/'
+PATH_PATTERN='C:\\rhinoscript\\gitProject\\FacadePatterns\\'
 PHASES=['BLOCK','MASSING','TYPESRF','TYPEMESH']
 COLOR_SET_01=[(60,160,208),
                 (255,89,25),
@@ -307,12 +308,19 @@ class Engine():
     def loadFacadeTypes(self):
         facadeTypes=[]
         import os
-        directory='./FacadePatterns/'
+        #directory='./FacadePatterns/'
+        #directory='C:\\rhinoscript\\gitProject\\FacadePatterns\\'
+        directory=self.getPathPattern()
         files=os.listdir(directory)
         for f in files:
             if f.find('.facade')>0:
                 filename=directory+f
-                with open(filename,'rb') as fp:
+                print(filename)
+                #for mac use 'rb'
+                #with open(filename,'rb') as fp:
+                with open(filename,'r') as fp:
+                    #for line in fp:
+                    #    print(line)
                     facadeTypes.append(pkl.load(fp))
 
         self.facadeTypes=facadeTypes
