@@ -1,9 +1,13 @@
+# -*- coding: utf-8 -*-
+
+import linecache
+import sys
 import Rhino
 import rhinoscriptsyntax as rs
 # import rsUI
 # reload(rsUI)
 
-
+TOLERANCE=0.0001
 TYPECOLORS=[(0,102,204),
             (51,153,255),
             (153,204,255),
@@ -12,6 +16,22 @@ TYPECOLORS=[(0,102,204),
             (153,0,0)]
 
 
+def equals(num1,num2,tolerance=TOLERANCE):
+    if abs(num1-num2)<tolerance:return True
+    return False
+
+def listsEqual(l1,l2,tolerance=TOLERANCE):
+    if len(l1)!=len(l2):return False
+    for p1,p2 in zip(l1,l2):
+        d=rs.Distance(p1,p2)
+        if d>tolerance:return False
+    return True
+
+def shortGuid(guid):
+    if guid is None:return 'None'
+    guid=str(guid)
+    txt=str(guid[:2])+str(guid[-2:])
+    return '['+txt+']'
 #///////////////////////////////
 #//////// curve operations /////
 #///////////////////////////////
@@ -122,16 +142,16 @@ def divEQCrvToPolyAD(crv,w=900,adjacentCrvs=None):
 
 def bisecNormalAtStart(crv,compare):
     tolerance=0.001
-    print('at start')
+   #print('at start')
     p0=rs.CurveStartPoint(crv)
     n1s=curvePlnrNormalAtEnds(crv)
     n1=n1s[0]
     n2=None
 
     #rs.AddPoint(p0)
-    print('p0:',p0)
-    print('pS:',rs.CurveStartPoint(compare))
-    print('pE:',rs.CurveEndPoint(compare))
+   #print('p0:',p0)
+   #print('pS:',rs.CurveStartPoint(compare))
+   #print('pE:',rs.CurveEndPoint(compare))
 
     compStart=rs.CurveStartPoint(compare)
     compEnd=rs.CurveEndPoint(compare)
@@ -142,12 +162,12 @@ def bisecNormalAtStart(crv,compare):
     n2s=curvePlnrNormalAtEnds(compare)
     if rs.Distance(p0,compStart)<tolerance:
         n2=n2s[0]
-        print('found startpoint match')
+       #print('found startpoint match')
     elif rs.Distance(p0,compEnd)<tolerance:
         n2=n2s[1]
-        print('found endpoint match')
+       #print('found endpoint match')
     else :
-        print('match not found')
+       #print('match not found')
         return None
     # rs.AddLine(p0,p0+n2)
     # rs.AddLine(p0,p0+n1)
@@ -155,24 +175,24 @@ def bisecNormalAtStart(crv,compare):
     #rs.AddLine(p0,p0+n)
     return n
 def bisecNormalAtEnd(crv,compare):
-    print('at end')
+   #print('at end')
     p0=rs.CurveEndPoint(crv)
     n1s=curvePlnrNormalAtEnds(crv)
     n1=n1s[1]
     n2=None
     #
     # rs.AddPoint(p0)
-    # print('p0:',p0)
-    # print('pS:',rs.CurveStartPoint(compare))
-    # print('pE:',rs.CurveEndPoint(compare))
+    ##print('p0:',p0)
+    ##print('pS:',rs.CurveStartPoint(compare))
+    ##print('pE:',rs.CurveEndPoint(compare))
 
     n2s=curvePlnrNormalAtEnds(compare)
     if p0==rs.CurveStartPoint(compare):
         n2=n2s[0]
-        print('found startpoint match')
+       #print('found startpoint match')
     elif p0==rs.CurveEndPoint(compare):
         n2=n2s[1]
-        print('found endpoint match')
+       #print('found endpoint match')
     else : return None
     #rs.AddLine(p0,p0+n2)
     #rs.AddLine(p0,p0+n1)
@@ -206,7 +226,7 @@ def cxc(crv,pt,r,onlyNext=True):
     rs.DeleteObject(xc)
     dom=rs.CurveDomain(crv)
     # endT=rs.CurveClosestPoint(crv,rs.CurveEndPoint(crv))
-    # print('endT :'endT)
+    ##print('endT :'endT)
     if onlyNext:
         centerT=rs.CurveClosestPoint(crv,pt)
         maxT=dom[0]
@@ -217,7 +237,7 @@ def cxc(crv,pt,r,onlyNext=True):
             if t>maxT:
                 maxT=t
                 maxI=i
-            # print(dom[1],centerT,t)
+            ##print(dom[1],centerT,t)
         if maxT>dom[1] or maxT<centerT:
             return None
         return xpts[maxI]
@@ -229,7 +249,7 @@ def divCrvByLengths(crv,lengths):
     wi=0
 
     xp=cxc(crv,pc,lengths[wi])
-    # print('xp:',xp)
+    ##print('xp:',xp)
     count=0
     while xp is not None:
         # count+=1
@@ -239,7 +259,7 @@ def divCrvByLengths(crv,lengths):
         wi+=1
         if wi>len(lengths)-1:wi=0
         xp=cxc(crv,pc,lengths[wi])
-        # print('length: ',lengths[wi])
+        ##print('length: ',lengths[wi])
 
     outPts.append(rs.CurveEndPoint(crv))
     return outPts
@@ -292,16 +312,16 @@ def divideSrfToPattern(srf,facadeType):
     top,bot,verts=getSrfTopBotVertCrvs(srf)
 
     if bot is None:
-        print('bot is None exit')
+       #print('bot is None exit')
         return None
     if not rs.IsCurve(bot):
-        print('bot is not Curve exit')
+       #print('bot is not Curve exit')
         return None
     if len(verts)<1:
-        print('len(verts)<1')
+       #print('len(verts)<1')
         return None
     if not rs.IsCurve(verts[0]):
-        print('verts[0] is not a curve')
+       #print('verts[0] is not a curve')
         return None
 
 
@@ -309,12 +329,12 @@ def divideSrfToPattern(srf,facadeType):
     p1=rs.CurveEndPoint(verts[0])
     if p1[2]>p0[2]: vect=p1-p0
     else: vect=p0-p1
-    print(vect)
-    rs.EnableRedraw(False)
+   #print(vect)
+
     m=meshExtrudeCrvToPattern(bot,facadeType,vect)
     rs.DeleteObjects([top,bot])
     rs.DeleteObjects(verts)
-    rs.EnableRedraw(True)
+
     return m
 
 
@@ -419,7 +439,7 @@ def meshSwipPolyAlongPoly(profile,rail):
 #////////////////////////////////////
 #orient objects along poly points
 def orientObjAlongPolyPts(obj,pts,basePoint=(0,0,0),baseVect=(0,1,0)):
-    print('orient obj along poly points')
+   #print('orient obj along poly points')
     up=(0,0,1)
     generatedObjects=[]
     for i in range(0,len(pts)-1):
@@ -466,11 +486,11 @@ def getSrfTopBotVertCrvs(srf):
     for c in crvs:
         start=rs.CurveStartPoint(c)
         end=rs.CurveEndPoint(c)
-        # print('checking z of end points:',start[2],end[2])
+        ##print('checking z of end points:',start[2],end[2])
         if abs(start[2]-end[2])<tolerance: hor_crvs.append(c)
         elif abs(start[1]-end[1])<tolerance and abs(start[0]-end[0])<tolerance: ver_crvs.append(c)
         else: trash.append(c)
-    # print('hor_crvs len:',len(hor_crvs))
+    ##print('hor_crvs len:',len(hor_crvs))
     hor_crvs=rs.JoinCurves(hor_crvs,True)
 
     bot=None
@@ -492,7 +512,17 @@ def getSrfTopBotVertCrvs(srf):
     rs.DeleteObjects(trash)
 
     return top,bot,ver_crvs
-#
+
+def getSrfHLimit(srf):
+    boundary=rs.DuplicateSurfaceBorder(srf)
+    pts=srf.CurveEditPoints(boundary)
+    zs=[]
+    for p in pts:zs.append(p[2])
+    zs.sort()
+    top=zs[-1]
+    bot=zs[0]
+    return bot,top
+
 def getAdjacentSrfs(srf,layername='CladdingDivide'):
     sel=rs.ObjectsByLayer(layername)
     srfs=[]
@@ -569,12 +599,12 @@ def divSrfVects(srf,divWidth=900):
     adj=getAdjacentSrfs(srf)
     vertSrfs=getVertSrf(adj)
 
-    print('len adj:',len(adj))
-    print('len verts:',len(vertSrfs))
+   #print('len adj:',len(adj))
+   #print('len verts:',len(vertSrfs))
     rs.SelectObjects(vertSrfs)
 
     if(len(vertSrfs)>2):
-        print('found more than 2 adjacent surface, please check')
+       #print('found more than 2 adjacent surface, please check')
         #rs.SelectObjects(vertSrfs)
         return None
 
@@ -585,7 +615,32 @@ def divSrfVects(srf,divWidth=900):
 
     drawVectors(poly.points,poly.normals)
 
-
+def isHorizonalSrf(srf,return_dir=False,tolerance=TOLERANCE):
+    boundary=rs.DuplicateSurfaceBorder(srf)
+    if type(boundary is list):boundary=boundary[0]
+    sp=rs.CurveStartPoint(boundary)
+    uv=rs.SurfaceClosestPoint(srf,sp)
+    normal=rs.SurfaceNormal(srf,uv)
+    normal=rs.VectorUnitize(normal)
+    direct=normal[2]
+    nz=abs(normal[2])
+    rs.DeleteObject(boundary)
+    if abs(nz-1)<tolerance:
+        if return_dir:return True,direct
+        return True
+    if return_dir:return False,direct
+    return False
+def isHorizontalUpSrf(srf,tolerance=TOLERANCE):
+    boundary=rs.DuplicateSurfaceBorder(srf)
+    if type(boundary is list):boundary=boundary[0]
+    sp=rs.CurveStartPoint(boundary)
+    uv=rs.SurfaceClosestPoint(srf,sp)
+    normal=rs.SurfaceNormal(srf,uv)
+    normal=rs.VectorUnitize(normal)
+    nz=normal[2]
+    rs.DeleteObject(boundary)
+    if abs(nz-1)<tolerance:return True
+    return False
     #height=rs.CurveLength(verts[0])
 def isVertical(crv,tolerance=0.0001):
     start=rs.CurveStartPoint(c)
@@ -602,13 +657,13 @@ def isHorizontal(crv,tolerance=0.0001):
     return False
 def splitSrfBySrfs(srf,cutterSrfs):
     def split(srfs,cutter,stop=False):
-        # print('iter:{},num srfs:{}'.format(iteration,len(srfs)))
+        ##print('iter:{},num srfs:{}'.format(iteration,len(srfs)))
         outbin=[]
         for s in srfs:
             if not rs.IsBrep(s):
                 continue
             result=rs.SplitBrep(s,cutter,True)
-            print('$result is ',result)
+            #print('$result is ',result)
 
             if result is None:
                 # pass
@@ -621,6 +676,7 @@ def splitSrfBySrfs(srf,cutterSrfs):
         cutter=cutterSrfs[i]
         srfs=split(srfs,cutter)
     rs.DeleteObjects(cutterSrfs)
+    return srfs
 def splitSrfVerticallyByPts(srf,pts):
     normals=[]
     up=(0,0,1000000000)
@@ -639,22 +695,28 @@ def splitSrfVerticallyByPts(srf,pts):
         cutter=rs.ExtrudeCurve(l,path)
         rs.DeleteObjects([l,path])
 
-        print(rs.IsBrep(cutter))
-        print(cutter)
+        #print(rs.IsBrep(cutter))
+        #print(cutter)
         cutters.append(cutter)
     # rs.SelectObjects(cutters)
     srfs=splitSrfBySrfs(srf,cutters)
     return srfs
-def spliteIrregularPolygon(srf):
+def splitIrregularPolygon(srf):
     boundary=rs.DuplicateSurfaceBorder(srf)
-    crvs=rs.ExplodeCurves(boundary,True)
+    if type(boundary) is list:
+        crvs=rs.ExplodeCurves(boundary[0],False)
+        rs.DeleteObjects(boundary)
+    else :crvs=rs.ExplodeCurves(boundary,True)
     hors=[]
     for c in crvs:
         if isHorizontal(c): hors.append(c)
     pts=[]
+    #print('hors=',hors)
     for c in hors:
         p=rs.CurveStartPoint(c)
         pts.append(p)
+    rs.DeleteObjects(crvs)#
+    #print('from splitIrregularPoly ',pts)
     return splitSrfVerticallyByPts(srf,pts)
 
 
@@ -706,10 +768,10 @@ def applyComponent(filePath,polyAD):
     try:
         component=importComponent(filPath)
     except:
-        print('exception on importing module')
+       print('exception on importing module')
 
     if component is None:
-        print('component is None, check import path')
+       #print('component is None, check import path')
         return None
 
 
@@ -746,13 +808,13 @@ class applyComponent():
     def handleUIFileSelected(self,sender,e):
         txt=self.uiFileSelector.SelectedText
         self.loadPath=self.loadDirectory+txt
-        print('combo select:',self.loadPath)
+       #print('combo select:',self.loadPath)
         self.update()
 
     #is update method is WIP
     #hard coded behaviors
     def update(self):
-        print('update')
+       #print('update')
         #delete last generated objects
         try:
             rs.DeleteObjects(self.generatedObjs)
@@ -763,7 +825,7 @@ class applyComponent():
         divWidth=600
         crv=self.baseCrv
         if not rs.IsObject(crv):
-            print('crv is not an object')
+           #print('crv is not an object')
             return
 
         if not rs.IsPolyline(crv):
@@ -773,7 +835,7 @@ class applyComponent():
 
         pts=rs.CurveEditPoints(rail)
         if len(pts)<3:
-            print('too little points')
+           #print('too little points')
             return
 
         #find vectors to move and orient the profile
@@ -787,11 +849,11 @@ class applyComponent():
         try:
             component=importComponent(path)
         except:
-            print('exception on importing module')
+           print('exception on importing module')
 
 
         if component is None:
-            print('component is None')
+           #print('component is None')
             return None
 
         #rs.MoveObjects(component.breps,pts[0])
@@ -799,7 +861,7 @@ class applyComponent():
         for b in component.breps:
             self.generatedObjs.append(b)
             oriented=orientObjAlongPolyPts(b,pts)
-            print('pts count:',len(pts),' num gen:',len(oriented))
+           #print('pts count:',len(pts),' num gen:',len(oriented))
 
         rs.MoveObjects(component.polys,pts[0])
         rs.RotateObjects(component.polys,pts[0],a)
@@ -808,6 +870,16 @@ class applyComponent():
             mesh=meshSwipPolyAlongPoly(c,rail)
             self.generatedObjs.append(mesh)
         rs.DeleteObject(rail)
-        print('generated obj count:',len(self.generatedObjs))
+       #print('generated obj count:',len(self.generatedObjs))
         rs.AddGroup('gen')
         rs.AddObjectsToGroup(self.generatedObjs,'gen')
+
+
+def PrintException():
+    exc_type, exc_obj, tb = sys.exc_info()
+    f = tb.tb_frame
+    lineno = tb.tb_lineno
+    filename = f.f_code.co_filename
+    linecache.checkcache(filename)
+    line = linecache.getline(filename, lineno, f.f_globals)
+    print ('EXCEPTION IN ({}, LINE {} "{}"): {}'.format(filename, lineno, line.strip(), exc_obj))

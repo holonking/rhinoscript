@@ -1,3 +1,5 @@
+
+# -*- coding: utf-8 -*-
 import rhinoscriptsyntax as rs
 import Rhino
 import scriptcontext
@@ -7,12 +9,35 @@ import clr
 clr.AddReference("Eto")
 clr.AddReference("Rhino.UI")
 from Rhino.UI import *
-from Eto.Forms import Form,Panel,Dialog, Label, TabControl, ComboBox, TabPage, TextBox, StackLayout, StackLayoutItem, Orientation, Button, HorizontalAlignment, MessageBox
+from Eto.Forms import Form,Panel,Dialog, Label, TabControl,ComboBox, TabPage, TextBox, TextArea,StackLayout,StackLayoutItem, Orientation, Button,HorizontalAlignment, MessageBox
 from Eto.Drawing import *
 import os
 import rsTools
 reload(rsTools)
 from rsTools import *
+
+
+def Gen_title_combo_row(txt,items,return_all_controls=False):
+    rowLayH=StackLayout(Spacing=0,Orientation=Orientation.Horizontal)
+    title=Label()
+    title.Size=Size(50,30)
+    title.Text=txt
+    combo=ComboBox()
+    combo.Width=130
+    for i in items:
+        combo.Items.Add(str(i))
+    combo.SelectedIndex=0
+    rowLayH.Items.Add(title)
+    rowLayH.Items.Add(combo)
+    if return_all_controls:
+        return rowLayH,title,combo
+    else: return rowLayH
+def Gen_title_bts_row(txt='txt',button_texts=['bt'],items=[1,2,3],
+                        button_widths=[50],
+                        return_all_controls=False):
+    #TODO:generate StackLayout(horizontal) for this row
+    pass
+
 
 class DataPainter(Panel):
 
@@ -26,26 +51,31 @@ class MainForm(Form):
     def __init__(self):
         #super(Form,self).__init__(*args, **kwargs)
         # Form.Resizable=True
-        self.Size=Size(1000,600)
+        self.Size=Size(500,600)
         #call initUI from outside and pass an engine to it
         #self.initUI()
 
 
     def initUI(self,engine):
+        #┌────layMainH───┬───────────┐
+        #│┌───layMainV──┐│treeTextBox│
+        #││   tabPanel  ││           │
+        #│├─────────────┤│           │
+        #││  objTextBox ││           │
+        #│├─────────────┤│           │
+        #││  rhiTextBox ││           │
+        #│└─────────────┘│           │
+        #└───────────────┴───────────┘
         self.engine=engine
         tabControl=TabControl()
         layMainH=StackLayout(Spacing=0,Orientation=Orientation.Horizontal)
         layMainV=StackLayout(Spacing = 2, Orientation = Orientation.Vertical)
 
-        self.drawPanel=DataPainter()
-        self.drawPanel.Size=Size(600,600)
+        layMainH.Items.Add(layMainV)
 
+        #tab panel groupd
         self.tabPanel=Panel()
-        self.tabPanel.Size=Size(300,600)
-
-
-        #control groups
-
+        self.tabPanel.Size=Size(200,350)
         self.page_GENBLOCK=TabPage()
         self.page_GENBLOCK.Text='BLK'
         self.page_GENMASSING=TabPage()
@@ -55,20 +85,32 @@ class MainForm(Form):
         self.page_GENTYPEMESH=TabPage()
         self.page_GENTYPEMESH.Text='MSH'
         self.page_GENCOMPONENT=None
-
         tabControl.Pages.Add(self.page_GENBLOCK)
         tabControl.Pages.Add(self.page_GENMASSING)
         tabControl.Pages.Add(self.page_GENTYPESRF)
         tabControl.Pages.Add(self.page_GENTYPEMESH)
-
-        #self.Content=tabControl
-        layMainH.Items.Add(self.tabPanel)
-        layMainH.Items.Add(self.drawPanel)
-        #self.Controls.Add
         self.tabPanel.Content=tabControl
-        self.Content=layMainH
-        #self.Controls.Add(layMainH)
 
+        #objPanel
+        self.objTextBox=TextBox()
+        self.objTextBox.Size=Size(200,150)
+        self.objTextBox.Text='phase obj \ninsoection'
+        #rhiPanel
+        self.rhiTextBox=TextBox()
+        self.rhiTextBox.Size=Size(200,50)
+        self.rhiTextBox.Text='rhino guid'
+
+        layMainV.Items.Add(self.tabPanel)
+        layMainV.Items.Add(self.objTextBox)
+        layMainV.Items.Add(self.rhiTextBox)
+
+        textBox=TextBox()
+        textBox.Font=Font(textBox.Font.Typeface, 8);
+        textBox.Size=Size(300,600)
+        self.treeTextBox=textBox
+        layMainH.Items.Add(textBox)
+
+        self.Content=layMainH
         self.gen_GENBLOCK()
         self.gen_GENTYPESRF_row()
 
@@ -80,17 +122,40 @@ class MainForm(Form):
         bt_view_block.Text='viewBlock'
         bt_view_srf=Button()
         bt_view_srf.Text='viewSrf'
+        bt_interact=Button()
+        bt_interact.Text='+Intr'
+
 
         self.UI_GENBLOCK=AttrDict()
         self.UI_GENBLOCK.bt_view_block=bt_view_block
         self.UI_GENBLOCK.bt_view_srf=bt_view_srf
+        self.UI_GENBLOCK.bt_interact=bt_interact
 
         layH.Items.Add(bt_view_block)
         layH.Items.Add(bt_view_srf)
+        layH.Items.Add(bt_interact)
 
         layV.Items.Add(layH)
-        self.page_GENBLOCK.Content=layV
 
+        #TODO:add UI to set massing block properties
+        #TODO:gen the row
+        lb_selected_block=Label()
+        lb_selected_block.Text='selected short guid'
+        lb_selected_block.Width=100
+        row_typeIndex,tempTitle,combo1=Gen_title_combo_row('w type1',range(10),True)
+        row_typeIndex2,tempTitle,combo1b=Gen_title_combo_row('w type2',range(10),True)
+        row_top_typeIndex,tempTitle,comboTop=Gen_title_combo_row('g type',range(10),return_all_controls=True)
+        layV.Items.Add(lb_selected_block)
+        layV.Items.Add(row_typeIndex)
+        layV.Items.Add(row_typeIndex2)
+        layV.Items.Add(row_top_typeIndex)
+
+        self.UI_GENBLOCK.lb_selected_block=lb_selected_block
+        self.UI_GENBLOCK.combo_typeIndex1=combo1
+        self.UI_GENBLOCK.combo_typeIndex2=combo1b
+        self.UI_GENBLOCK.combo_typeTopIndex=comboTop
+
+        self.page_GENBLOCK.Content=layV
 
 
     def gen_GENTYPESRF_row(self):
@@ -99,13 +164,17 @@ class MainForm(Form):
         self.UI_GENTYPESRF=AttrDict()
 
         bt_view_srf=Button()
-        bt_view_srf.Text='viewSrf'
+        bt_view_srf.Text='vSrf'
+        bt_view_srf.Width=50
         bt_view_mesh=Button()
-        bt_view_mesh.Text='viewMesh'
+        bt_view_mesh.Text='vMesh'
+        bt_view_mesh.Width=50
         bt_regen=Button()
         bt_regen.Text='Regen'
+        bt_regen.Width=50
         bt_inspect=Button()
         bt_inspect.Text=('INSPECT')
+        bt_inspect.Width=50
 
         self.UI_GENTYPESRF.bt_view_srf=bt_view_srf
         self.UI_GENTYPESRF.bt_view_mesh=bt_view_mesh
@@ -124,21 +193,26 @@ class MainForm(Form):
         self.UI_GENTYPESRF.bts2=[]
         self.UI_GENTYPESRF.combos=[]
 
+
         for i in range(0,10):
             row=AttrDict()
             layH=StackLayout(Spacing = 0, Orientation = Orientation.Horizontal)
             layV.Items.Add(layH)
             bt1=Button()
-            bt1.Width=50
+            bt1.Width=30
             bt1.Text=str(i)
-            #color=self.engine.get_color(phase,typeIndex)
+
+            color=self.engine.get_color_set1(i)
+            #print (color)
             #print(color)
-            #bt1.BackgroundColor=Color(color[0],color[1],color[2])
+            try:
+                bt1.BackgroundColor=Color(color[0]/255.0,color[1]/255.0,color[2]/255.0)
+            except:pass
             bt2=Button()
-            bt2.Width=50
+            bt2.Width=30
             bt2.Text='set'
             combo=ComboBox()
-            combo.Width=150
+            combo.Width=140
             PATH=self.engine.getPathPattern()
             files=[]
             for f in os.listdir(PATH):

@@ -26,13 +26,16 @@ from Rhino.UI import *
 from Eto.Forms import Form, Dialog, Label, TabControl, ComboBox,TabPage, TextBox, StackLayout, StackLayoutItem, Orientation, Button, HorizontalAlignment, MessageBox
 from Eto.Drawing import *
 
+
+
 engine=Engine()
 #engine.fixCurrentModel()
 form = MainForm()
 form.initUI(engine)
 form.TopMost=True
-
 try:
     engine.assignAction(form)
 except Exception as e:print(e)
+
+
 form.Show()
