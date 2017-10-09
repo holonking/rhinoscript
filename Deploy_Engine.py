@@ -159,7 +159,15 @@ class Engine():
         o.description=description
         o.needUpdate=needUpdate
         #parent.add_child(o)
+        #rhino layer and attributes
         rs.ObjectColor(guid,self.get_color(phase,typeIndex))
+        try:
+            layer=get_layer_name(phase)
+            print(layer)
+            rs.ObjectLayer(guid,layer)
+        except Exception as e:print(e)
+        #layer=self.get_layer_name(phase)
+        #rs.ObjectLayer(guid,layer)
         self.data.add_child(o)
         self.logDataTree()
         return o
@@ -167,6 +175,7 @@ class Engine():
     def deleteObjectsByGuid(self,guids):
         # print('deleteObjectsByGuid')
         # otd=[]
+        if guids is None: return
         for guid in guids:
             o=self.data.find('guid',guid)
             if o is not None:
@@ -719,8 +728,13 @@ class Engine():
             self.deleteObjectsByGuid(sel)
             rs.CurrentLayer(layername)
 
-            blocks=rs.ObjectsByLayer(get_layer_name('BLOCK'))
-            cblocks=rs.CopyObjects(blocks)
+            #blocks=rs.ObjectsByLayer(get_layer_name('BLOCK'))
+            cons=[('phase','BLOCK')]
+            obj_blocks=self.data.find_all(cons)
+            print('flag_1')
+            rhi_blocks=self.data.find_all_guids(cons)
+            print('flag_2',rhi_blocks)
+            cblocks=rs.CopyObjects(rhi_blocks)
             ublocks=rs.BooleanUnion(cblocks,True)
 
             splitedSrfs=[]
@@ -729,15 +743,21 @@ class Engine():
 
             #找出union block里的横竖面
             print('Sparate horz and vert srfs')
+
+
             for b in ublocks:
                 os=rs.ExplodePolysurfaces(b,True)
+                print('os',os)
                 #先把水平面分走
                 horzSrfs=[]
                 vertSrfs=[]
 
                 for s in os:
-                    if s is None: continue
-                    if not rs.IsObject(s): continue
+                    print('line 740')
+                    if s is None:
+                        continue
+                    if not rs.IsObject(s):
+                        continue
                     isHor,direct=isHorizonalSrf(s,True)
                     if isHorizonalSrf(s):
                         if direct<0:
@@ -755,17 +775,14 @@ class Engine():
             print('assign parent objects')
             #Union block的横竖面找parent
 
-            for b in blocks:
-                #joinBin=[]
-                bpo=self.getObjectByGuid(b)
-                #print('bpo='+shortGuid(bpo.guid))
-                srfs=rs.ExplodePolysurfaces(b,False)
+            for po in obj_blocks:
+                srfs=rs.ExplodePolysurfaces(po.guid,False)
                 for vsrf in vertSrfs:
                     pts2=rs.SurfaceEditPoints(vsrf)
                     for s in srfs:
                         pts1=rs.SurfaceEditPoints(s)
-                        if listsEqual(pts1,pts2): #or pts1==pts2r:
-                            parentDic[vsrf]=bpo
+                        if listsEqual(pts1,pts2):
+                            parentDic[vsrf]=po
                 rs.DeleteObjects(srfs)
 
             print(parentDic)
@@ -808,8 +825,9 @@ class Engine():
                     self.setObjectType(o,typeIndex)
                     #self.logDataTree()
                 rs.DeleteObject(boundary)
-        except:
-            PrintException()
+        except Exception as e:
+            print('exception:',e)
+            #PrintException()
             rs.EnableRedraw(True)
         self.resumeInteraction()
         rs.EnableRedraw(True)

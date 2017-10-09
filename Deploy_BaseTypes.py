@@ -21,7 +21,8 @@ def PrintException():
     filename = f.f_code.co_filename
     linecache.checkcache(filename)
     line = linecache.getline(filename, lineno, f.f_globals)
-    print ('EXCEPTION IN ({}, LINE {} "{}"): {}'.format(filename, lineno, line.strip(), exc_obj))
+    print 'EXCEPTION IN ({}, LINE {} "{}"): {}'.format(filename, lineno, line.strip(), exc_obj)
+
 
 
 class AttrDict(dict):
@@ -99,6 +100,19 @@ class PhaseObject():
 
         for c in self.children:
             basket=c.find_all(name_val_pairs,basket)
+
+        return basket
+    def find_all_guids(self,name_val_pairs,basket=[]):
+        match=True
+        for name,val in name_val_pairs:
+            if self.__dict__[name] != val:
+                match=False
+                break
+        if match:
+            basket.append(self.guid)
+
+        for c in self.children:
+            basket=c.find_all_guids(name_val_pairs,basket)
 
         return basket
 
