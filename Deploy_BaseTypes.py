@@ -6,7 +6,7 @@ D='─'
 SELECT='█'
 SPACE='   '
 import os
-
+import rhinoscriptsyntax as rs
 
 def shortGuid(guid):
     if guid is None:return 'None'
@@ -31,7 +31,7 @@ class AttrDict(dict):
         self.__dict__ = self
 
 class PhaseObject():
-    def __init__(self, parent=None,phase='None',guid=-1,*args, **kwargs):
+    def __init__(self, parent=None,phase='None',typeIndex=0,guid=None,*args, **kwargs):
         #super(AttrDict,self).__init__(*args, **kwargs)
         self.name='UnnamedPO'
         self.guid=guid
@@ -43,7 +43,7 @@ class PhaseObject():
         self.needUpdate=False
         self.level=0
         #usualy each surface has one type index
-        self.typeIndex=0
+        self.typeIndex=typeIndex
         #during earlier stage,
         #a massing can have multiple index
         #by functionalities
@@ -51,6 +51,11 @@ class PhaseObject():
         self.is_selected=False
         self.description=''
     def __str__(self):
+        txt=self.phase+'( {} )_{}'.format(len(self.children),self.typeIndex)
+        if self.guid is not None:
+            txt+=shortGuid(self.guid)
+        return txt
+    def to_string(self):
         txt=self.phase+'( {} )_{}'.format(len(self.children),self.typeIndex)
         if self.guid is not None:
             txt+=shortGuid(self.guid)
@@ -80,6 +85,22 @@ class PhaseObject():
         if self.children_count()==0:return True
         return False
 
+    def find_all(self,name_val_pairs,basket=[]):
+        #usage:
+        #conditions=[('phase','BLOCK'),('typeIndex',1)]
+        #tree.find_all(conditions)
+        match=True
+        for name,val in name_val_pairs:
+            if self.__dict__[name] != val:
+                match=False
+                break
+        if match:
+            basket.append(self)
+
+        for c in self.children:
+            basket=c.find_all(name_val_pairs,basket)
+
+        return basket
 
     def find(self,name,val):
         if self.__dict__[name]==val:
@@ -167,17 +188,21 @@ class PhaseObject():
         #    c.level=self.level+1
 
     def add_child(self,child):
+        child.parent=self
         self.children.append(child)
         #child.level=self.level+1
 
     def delete(self):
+        #print('@PhaseObject.delete self.parent=',self.parent)
         if self.parent is not None:
+            #print('removing self from',self.parent)
             self.parent.remove_child(self)
         if self.children:
             for c in self.children:
                 c.delete()
-        # if rs.IsObject(self.guid):
-        #     rs.DeleteObject(self.guid)
+        if self.guid is not None:
+            if rs.IsObject(self.guid):
+                rs.DeleteObject(self.guid)
 
     def remove_child(self,child):
         #end father and son relationship
@@ -190,16 +215,24 @@ class PhaseObject():
         pass
 def demo():
     A=PhaseObject()
-    B=PhaseObject(A,phase='B')
+    B=PhaseObject(A,phase='B',typeIndex=322)
     C=PhaseObject(A,phase='C')
     D=PhaseObject(B,phase='D')
-    E=PhaseObject(A,phase='E')
-    F=PhaseObject(D,phase='F')
+    E=PhaseObject(A,phase='E',typeIndex=322)
+    F=PhaseObject(D,phase='F',typeIndex=322)
 
     print(F.root)
     print(A.tree())
     fo=A.find('phase','F')
     print('found form a',fo)
+
+    cons=[('typeIndex',322)]
+    fos=A.find_all(cons)
+    print('find_all:')
+    for o in fos:
+        print(o)
+
+
     print('----------------')
 
     B.delete()

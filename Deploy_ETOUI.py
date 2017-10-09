@@ -51,7 +51,7 @@ class MainForm(Form):
     def __init__(self):
         #super(Form,self).__init__(*args, **kwargs)
         # Form.Resizable=True
-        self.Size=Size(500,600)
+        self.Size=Size(550,600)
         #call initUI from outside and pass an engine to it
         #self.initUI()
 
@@ -114,6 +114,8 @@ class MainForm(Form):
         self.gen_GENBLOCK()
         self.gen_GENTYPESRF_row()
 
+        self.gen_TOOLBAR(layMainH)
+
     def gen_GENBLOCK(self):
         layV=StackLayout(Spacing = 2, Orientation = Orientation.Vertical)
         layH=StackLayout(Spacing = 0, Orientation = Orientation.Horizontal)
@@ -157,6 +159,18 @@ class MainForm(Form):
 
         self.page_GENBLOCK.Content=layV
 
+    def gen_TOOLBAR(self,layout):
+        layV=StackLayout(Spacing = 2, Orientation = Orientation.Vertical)
+        bt_width=30
+        bt_delete=Button()
+        bt_delete.Text='del'
+        bt_delete.Width=bt_width
+
+        layV.Items.Add(bt_delete)
+        self.UI_TOOLBAR=AttrDict()
+        self.UI_TOOLBAR.bt_delete=bt_delete
+
+        layout.Items.Add(layV)
 
     def gen_GENTYPESRF_row(self):
         layV=StackLayout(Spacing = 2, Orientation = Orientation.Vertical)

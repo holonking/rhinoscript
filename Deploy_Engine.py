@@ -13,13 +13,13 @@ reload(Deploy_BaseTypes)
 from Deploy_BaseTypes import *
 
 VIEWMODE=None
-# PATH_PATTERN='./FacadePatterns/'
-#ROOT='/Users/holonking/Documents/Scripts/Rhinoscript/CladdingManagerDemo'
-#PATH_PATTERN='./FacadePatterns/'
-#PATH_PATTERN='C:\\rhinoscript\\gitProject\\FacadePatterns\\'
-PATH_PATTERN='C:\\Users\\31720\\Design\\Rhinoscript\\rhinoscript\\FacadePatterns\\'
-#PATH_PATTERN='C:/Users/31720/Design/Rhinoscript/rhinoscript/FacadePatterns/'
-#PATH_PATTERN='.\\FacadePatterns\\'
+import os
+#check which OS system, if nt, means windows
+if os.name=='nt':
+    PATH_PATTERN='C:\\Users\\31720\\Design\\Rhinoscript\\rhinoscript\\FacadePatterns\\'
+else:
+    PATH_PATTERN='./FacadePatterns/'
+
 PHASES=['BLOCK','MASSING','MASSINGSPLIT','TYPESRF','TYPEMESH','COMPONENTS']
 def get_layer_name(phase):
     return '$AGL_'+phase
@@ -173,53 +173,28 @@ class Engine():
                 o.delete()
         self.logDataTree()
 
+
     def deleteObjectByGuid(self,guid):
-        # print('deleteObjectsByGuid')
+        print('deleteObjectsByGuid')
+
         o=self.data.find('guid',guid)
+        print('DELETED OBJ',o)
         if o is not None:
             o.delete()
-        self.logDataTree()
 
+        self.logDataTree()
 
     def deleteObject(self,obj):
         if obj is None: return None
         #if rs.IsObject(obj.guid): rs.DeleteObject(obj.guid)
         obj.delete()
-    def deleteObjects(self,phaseIndex,typeIndex=None):
-        #deletes a phase object and returns upStream
-        upStream=None
-        trashGuid=[]
-        updatedList=[]
-        # print('before delete, self.data size:',len(self.data))
-
-        for o in self.data :
-            # print('@del ',o.phase,o.typeIndex,':',typeIndex)
-            if o.phase==phaseIndex:
-                if typeIndex is None: flag=True
-                elif typeIndex ==o.typeIndex: flag=True
-                else: flag=False
-                if flag:
-                    # print('found type index match')
-                    if rs.IsObject(o.guid):
-                        trashGuid.append(o.guid)
-                        upStream=o.parent
-                        try:#delete the object from upStream
-                            index=upStream.children.index(o)
-                            if index>=0: del upStream.children[index]
-                        except Exception as e:print('except inside del ',e)
-                else:
-                    updatedList.append(o)
-                #end if flag
-            else:
-                updatedList.append(o)
-            #end for o.phase
-        # print('updated list size:',updatedList)
-        self.data=updatedList
-        if len(trashGuid)>0:
-            # print('delteing ',len(trashGuid),' objects')
-            # print('..........................')
-            rs.DeleteObjects(trashGuid)
-        return upStream
+    def deleteObjects(self,phase,typeIndex=None):
+        #deletes objects off the same phase and type index
+        #<to be confirmed>
+        cons=[('phase',phase),('typeIndex',typeIndex)]
+        fos=self.data.find_all(cons)
+        for o in fos:
+            o.delete()
 
     #selection management
     def clearSelections(self):
@@ -494,7 +469,8 @@ class Engine():
         self.log_obj_panel=form.objTextBox
         self.log_rhi_panel=form.rhiTextBox
 
-
+        #TOOBAR action assignment
+        form.UI_TOOLBAR.bt_delete.Click+=self.handle_TOOLBAR_bt_delete
 
         self.logDataTree()
 
@@ -504,6 +480,7 @@ class Engine():
         Rhino.RhinoDoc.SelectObjects+=self.onSelectObjects
         Rhino.RhinoDoc.AddRhinoObject+=self.onAddRhinoObject
         Rhino.RhinoDoc.DeleteRhinoObject+=self.onDeleteRhinoObject
+
     def unloadRhinoEvents(self):
         Rhino.RhinoDoc.EndSaveDocument-=self.saveEngineData
         Rhino.RhinoDoc.SelectObjects-=self.onSelectObjects
@@ -511,17 +488,17 @@ class Engine():
         Rhino.RhinoDoc.DeleteRhinoObject-=self.onDeleteRhinoObject
     def saveEngineData(self,sender,e):
         self.save()
-    def onDeleteRhinoObject(self,e,guid,type):
-        print('on DeleteRhinoObject')
-        self.deleteObjectByGuid(guid)
+    def onDeleteRhinoObject(self,sender,e):
+        #do not impliment
+        #it will be called even when moving an object
+        #if you want to delete an object, please use the UI delete button
+        pass
+
     def onAddRhinoObject(self,sender,e):
         obj=rs.FirstObject()
         isBrep=rs.IsBrep(obj)
         if self.interaction_mode.auto_block and isBrep:
-            try:
-                self.addObject(obj,'BLOCK',0,None)
-            except:
-                PrintException()
+            self.addObject(obj,'BLOCK',0,None)
 
     def onFormCloseEvents(self,sender,e):
         self.save()
@@ -590,6 +567,14 @@ class Engine():
                 self.setComboIndexfromItem(self.form.UI_GENBLOCK.combo_typeIndex2,obj.typeIndices[1])
                 self.setComboIndexfromItem(self.form.UI_GENBLOCK.combo_typeTopIndex,obj.typeIndices[2])
         except:PrintException()
+
+    def handle_TOOLBAR_bt_delete(self,sender,e):
+        print('del pressed')
+        if self.selectedObject:
+            print('deleting:',self.selectedObject.to_string())
+            self.selectedObject.delete()
+        self.logDataTree()
+
     def handle_GENTYPESRF_bt_viewSrf(self,sender,e):
         print('view srf clicked')
         global VIEWMODE
