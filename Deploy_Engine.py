@@ -16,7 +16,7 @@ VIEWMODE=None
 import os
 #check which OS system, if nt, means windows
 if os.name=='nt':
-    PATH_PATTERN='C:\\Users\\31720\\Design\\Rhinoscript\\rhinoscript\\FacadePatterns\\'
+    PATH_PATTERN='C:\\Users\\seah\\Scripting\\rhinoscript\\FacadePatterns\\'
 else:
     PATH_PATTERN='./FacadePatterns/'
 
