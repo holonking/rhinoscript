@@ -789,91 +789,91 @@ def applyComponent(filePath,polyAD):
 
 
 
-class applyComponent():
-    def __init__(self,uiBaseCrv,uiFileSelector):
-        self.baseCrv=None
-        self.baseComp=None
-        self.uiBaseCrv=uiBaseCrv
-        self.uiBaseCrv.bt.Click+=self.handleUIBaseCrvClicked
-        self.generatedObjs=[]
-        self.uiFileSelector=uiFileSelector
-        self.uiFileSelector.SelectedIndexChanged+=self.handleUIFileSelected
-        self.loadDirectory='/Users/holonking/Documents/Design/RhinoComponents/'
-        self.loadPath='/Users/holonking/Documents/Design/RhinoComponents/component01.3dm'
-    def handleUIBaseCrvClicked(self,sender,e):
-        crv=rs.GetObject('select crv',4,False)
-        self.uiBaseCrv.tb.Text=str(crv)
-        self.baseCrv=crv
-        self.update()
-    def handleUIFileSelected(self,sender,e):
-        txt=self.uiFileSelector.SelectedText
-        self.loadPath=self.loadDirectory+txt
-       #print('combo select:',self.loadPath)
-        self.update()
-
-    #is update method is WIP
-    #hard coded behaviors
-    def update(self):
-       #print('update')
-        #delete last generated objects
-        try:
-            rs.DeleteObjects(self.generatedObjs)
-            self.generatedObjs=[]
-        except:
-            print('exception in delete generated object')
-
-        divWidth=600
-        crv=self.baseCrv
-        if not rs.IsObject(crv):
-           #print('crv is not an object')
-            return
-
-        if not rs.IsPolyline(crv):
-            pts=rs.DivideCurveEquidistant(crv,divWidth)
-            rail=rs.AddPolyline(pts)
-        else: rail=rs.CopyObject(crv)
-
-        pts=rs.CurveEditPoints(rail)
-        if len(pts)<3:
-           #print('too little points')
-            return
-
-        #find vectors to move and orient the profile
-        vect=pts[1]-pts[0]
-        vect=rs.VectorUnitize(vect)
-        a=rs.VectorAngle(vect,(0,1,0))-90
-
-        #load the component
-        path=self.loadPath
-        component=None
-        try:
-            component=importComponent(path)
-        except:
-           print('exception on importing module')
-
-
-        if component is None:
-           #print('component is None')
-            return None
-
-        #rs.MoveObjects(component.breps,pts[0])
-        #rs.RotateObjects(component.breps,pts[0],a)
-        for b in component.breps:
-            self.generatedObjs.append(b)
-            oriented=orientObjAlongPolyPts(b,pts)
-           #print('pts count:',len(pts),' num gen:',len(oriented))
-
-        rs.MoveObjects(component.polys,pts[0])
-        rs.RotateObjects(component.polys,pts[0],a)
-        for c in component.polys:
-            self.generatedObjs.append(c)
-            mesh=meshSwipPolyAlongPoly(c,rail)
-            self.generatedObjs.append(mesh)
-        rs.DeleteObject(rail)
-       #print('generated obj count:',len(self.generatedObjs))
-        rs.AddGroup('gen')
-        rs.AddObjectsToGroup(self.generatedObjs,'gen')
-
+# class ApplyComponent():
+#     def __init__(self,uiBaseCrv,uiFileSelector):
+#         self.baseCrv=None
+#         self.baseComp=None
+#         self.uiBaseCrv=uiBaseCrv
+#         self.uiBaseCrv.bt.Click+=self.handleUIBaseCrvClicked
+#         self.generatedObjs=[]
+#         self.uiFileSelector=uiFileSelector
+#         self.uiFileSelector.SelectedIndexChanged+=self.handleUIFileSelected
+#         #self.loadDirectory='/Users/holonking/Documents/Design/RhinoComponents/'
+#         #self.loadPath='/Users/holonking/Documents/Design/RhinoComponents/component01.3dm'
+#     def handleUIBaseCrvClicked(self,sender,e):
+#         crv=rs.GetObject('select crv',4,False)
+#         self.uiBaseCrv.tb.Text=str(crv)
+#         self.baseCrv=crv
+#         self.update()
+#     def handleUIFileSelected(self,sender,e):
+#         txt=self.uiFileSelector.SelectedText
+#         self.loadPath=self.loadDirectory+txt
+#        #print('combo select:',self.loadPath)
+#         self.update()
+#
+#     #is update method is WIP
+#     #hard coded behaviors
+#     def update(self):
+#        #print('update')
+#         #delete last generated objects
+#         try:
+#             rs.DeleteObjects(self.generatedObjs)
+#             self.generatedObjs=[]
+#         except:
+#             print('exception in delete generated object')
+#
+#         divWidth=600
+#         crv=self.baseCrv
+#         if not rs.IsObject(crv):
+#            #print('crv is not an object')
+#             return
+#
+#         if not rs.IsPolyline(crv):
+#             pts=rs.DivideCurveEquidistant(crv,divWidth)
+#             rail=rs.AddPolyline(pts)
+#         else: rail=rs.CopyObject(crv)
+#
+#         pts=rs.CurveEditPoints(rail)
+#         if len(pts)<3:
+#            #print('too little points')
+#             return
+#
+#         #find vectors to move and orient the profile
+#         vect=pts[1]-pts[0]
+#         vect=rs.VectorUnitize(vect)
+#         a=rs.VectorAngle(vect,(0,1,0))-90
+#
+#         #load the component
+#         path=self.loadPath
+#         component=None
+#         try:
+#             component=importComponent(path)
+#         except:
+#            print('exception on importing module')
+#
+#
+#         if component is None:
+#            #print('component is None')
+#             return None
+#
+#         #rs.MoveObjects(component.breps,pts[0])
+#         #rs.RotateObjects(component.breps,pts[0],a)
+#         for b in component.breps:
+#             self.generatedObjs.append(b)
+#             oriented=orientObjAlongPolyPts(b,pts)
+#            #print('pts count:',len(pts),' num gen:',len(oriented))
+#
+#         rs.MoveObjects(component.polys,pts[0])
+#         rs.RotateObjects(component.polys,pts[0],a)
+#         for c in component.polys:
+#             self.generatedObjs.append(c)
+#             mesh=meshSwipPolyAlongPoly(c,rail)
+#             self.generatedObjs.append(mesh)
+#         rs.DeleteObject(rail)
+#        #print('generated obj count:',len(self.generatedObjs))
+#         rs.AddGroup('gen')
+#         rs.AddObjectsToGroup(self.generatedObjs,'gen')
+#
 
 def PrintException():
     exc_type, exc_obj, tb = sys.exc_info()

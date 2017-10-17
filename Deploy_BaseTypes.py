@@ -62,6 +62,9 @@ class PhaseObject():
             txt+=shortGuid(self.guid)
         return txt
 
+    def short_guid(self):
+        return shortGuid(self.guid)
+
     @property
     def root(self):
         if self.parent is not None:
@@ -189,8 +192,16 @@ class PhaseObject():
         self.is_selected=False
 
     def set_parent(self,parent):
-        if parent is None: return
-        self.parent=parent
+        #remove it self from an exiting parent
+
+        if parent is None:
+            print('parent is None, so making a root node')
+            return
+        if self.parent is not None:
+            print('removing node from previous parent')
+            self.parent.remove_child(self)
+        #add_child already sets parent
+        print('setting parent to',parent.short_guid())
         parent.add_child(self)
         #update children level
         #for c in self.children:
@@ -220,6 +231,8 @@ class PhaseObject():
 
     def remove_child(self,child):
         #end father and son relationship
+        #this method doesnt readlly delete the child instance
+        #only removes the child from father
         #fist if statement is import if the child is
         #assigned to another father before deleting
         try:
@@ -228,14 +241,18 @@ class PhaseObject():
         except:pass
         pass
 def demo():
-    A=PhaseObject()
+    A=PhaseObject(phase='A')
     B=PhaseObject(A,phase='B',typeIndex=322)
     C=PhaseObject(A,phase='C')
     D=PhaseObject(B,phase='D')
     E=PhaseObject(A,phase='E',typeIndex=322)
-    F=PhaseObject(D,phase='F',typeIndex=322)
+    F=PhaseObject(A,phase='F',typeIndex=322)
+    F.set_parent(B)
+    D.set_parent(F)
+
 
     print(F.root)
+    print(F.short_guid())
     print(A.tree())
     fo=A.find('phase','F')
     print('found form a',fo)

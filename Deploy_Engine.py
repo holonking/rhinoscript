@@ -20,7 +20,7 @@ if os.name=='nt':
 else:
     PATH_PATTERN='./FacadePatterns/'
 
-PHASES=['BLOCK','MASSING','MASSINGSPLIT','TYPESRF','TYPEMESH','COMPONENTS']
+PHASES=['BLOCK','MASSING','MASSINGSRF','TYPESRF','TYPEMESH','COMPONENTS']
 def get_layer_name(phase):
     return '$AGL_'+phase
 
@@ -43,7 +43,7 @@ DEFAULT_COLOR=(60,160,208)
 PHASE_OBJECT_COLORS={
                     'BLOCK':[DEFAULT_COLOR],
                     'MASSING':[DEFAULT_COLOR],
-                    'MASSINGSPLIT':[DEFAULT_COLOR],
+                    'TYPESRF':[DEFAULT_COLOR],
                     'TYPESRF':[DEFAULT_COLOR],
                     'TYPEMESH':[DEFAULT_COLOR]
                     }
@@ -145,8 +145,13 @@ class Engine():
     #object life cycle managements
 
 
-    def addObject(self,guid,phase,typeIndex,parent=None,description='',needUpdate=False):
+    def addObject(self,guid,phase,typeIndex,
+                    parent=None,
+                    description='',
+                    needUpdate=False):
         #print('add object ',shortGuid(guid))
+        if parent is None:
+            parent=self.data
         if self.data.find('guid',guid):
             print('obj exists in data')
             return None
@@ -154,7 +159,7 @@ class Engine():
         o=PhaseObject()
         o.guid=guid
         o.phase=phase
-        o.typeIndex=typeIndex
+        o.typeIndex=int(typeIndex)
         o.set_parent(parent)
         o.description=description
         o.needUpdate=needUpdate
@@ -168,7 +173,7 @@ class Engine():
         except Exception as e:print(e)
         #layer=self.get_layer_name(phase)
         #rs.ObjectLayer(guid,layer)
-        self.data.add_child(o)
+
         self.logDataTree()
         return o
 
@@ -252,7 +257,7 @@ class Engine():
         for o in oAD:
             guids.append(o.guid)
         return guids
-    def getObjectPhaseObject(self,obj,phase):
+    # def getObjectPhaseObject(self,obj,phase):
         #finds the object's up or down stream objects
         phase1=obj.phase
         phase2=phase
@@ -720,21 +725,27 @@ class Engine():
         self.suspendInteraction()
         rs.EnableRedraw(False)
         try:
-            layername=get_layer_name('MASSING')
+            #only display TYPESRF layer
+            #this session union and split blocks into TYPESRF
+            phaseIndex='TYPESRF'
+            layername=get_layer_name(phaseIndex)
             tolerance=0.0001
             self.isolateLayer(layername)
-            sel=rs.ObjectsByLayer(layername)
-            print('sel from MASSING layer:',sel)
-            self.deleteObjectsByGuid(sel)
+
+            #delete existing massing srf phase objects
+            selobjs=self.data.find_all([('phase',phaseIndex)])
+            for o in selobjs:
+                o.delete()
+
             rs.CurrentLayer(layername)
 
-            #blocks=rs.ObjectsByLayer(get_layer_name('BLOCK'))
             cons=[('phase','BLOCK')]
             obj_blocks=self.data.find_all(cons)
-            print('flag_1')
             rhi_blocks=self.data.find_all_guids(cons)
-            print('flag_2',rhi_blocks)
+            #Rhino operations:
+            #copy the rhino blocks
             cblocks=rs.CopyObjects(rhi_blocks)
+            #apply union operation
             ublocks=rs.BooleanUnion(cblocks,True)
 
             splitedSrfs=[]
@@ -742,8 +753,9 @@ class Engine():
             vertSrfs=[]
 
             #找出union block里的横竖面
-            print('Sparate horz and vert srfs')
-
+            #print('Sparate horz and vert srfs')
+            if ublocks is None:
+                ublocks=cblocks
 
             for b in ublocks:
                 os=rs.ExplodePolysurfaces(b,True)
@@ -753,52 +765,70 @@ class Engine():
                 vertSrfs=[]
 
                 for s in os:
-                    print('line 740')
                     if s is None:
                         continue
                     if not rs.IsObject(s):
                         continue
                     isHor,direct=isHorizonalSrf(s,True)
                     if isHorizonalSrf(s):
-                        if direct<0:
+                        if direct<0:#horizontal facing down
                             rs.ObjectColor(s,(255,0,0))
-                        else:
+                        else:#horizontal facing up
                             rs.ObjectColor(s,COLOR_SET_01[5])
                         horzSrfs.append(s)
                     else : vertSrfs.append(s)
 
+            #got all horizontal srfs in horzSrfs
+            #got all vertical srfs in vertSrfs
+            #now find all parents for each vertSrfs by comparison
             blockedSrf=[]
+            #parentDict associates each vertical srf #to a block phase object
+            #parentDict['vertSrf]=block phase object
             parentDic={}
+            orphans=[]#a collection for guid of objects who do not match any parents
             wheel=0
-
 
             print('assign parent objects')
             #Union block的横竖面找parent
 
             for po in obj_blocks:
                 srfs=rs.ExplodePolysurfaces(po.guid,False)
-                for vsrf in vertSrfs:
+                for i in range(len(vertSrfs)):
+                    vsrf=vertSrfs[i]
                     pts2=rs.SurfaceEditPoints(vsrf)
+                    is_orphan=True
                     for s in srfs:
                         pts1=rs.SurfaceEditPoints(s)
                         if listsEqual(pts1,pts2):
                             parentDic[vsrf]=po
+                            is_orphan=False
+                            #del vertSrfs[i]
+                            #i-=1
+                            break
+                    if is_orphan:
+                        #select the srfs who can not match a parent
+                        orphans.append(vsrf)
                 rs.DeleteObjects(srfs)
+            #finish iterating one block object
 
-            print(parentDic)
-
+            #print(parentDic)
             print('split irregular polygons')
             for s in vertSrfs:
-                parent=parentDic[s]
-                if parent is None:
+                if not s in parentDic.keys():
                     print('parent is None')
                     rs.SelectObject(s)
                     continue
+                parent=parentDic[s]
+                if parent is None:
+                    print('819 parent got from parent dict is None')
+                    rs.SelectObject(s)
+                    continue
                 #rs.EnableRedraw(True)
-                phaseIndex='MASSING'
+                phaseIndex='TYPESRF'
                 typeIndex=parent.typeIndices[0]
                 boundary=rs.DuplicateSurfaceBorder(s)
                 pts=rs.CurveEditPoints(boundary)
+                #if False:
                 if len(pts)>5:
                     #print('splitting polygon')
                     #rs.EnableRedraw(False)
@@ -806,37 +836,46 @@ class Engine():
                     #print('splitIregPoly srfs=',srfs)
                     if srfs is None:
                         continue
-                    splitedSrfs+=srfs
+                    splitedSrfs += srfs
                     for ss in srfs:
                         #print(shortGuid(parent.guid))
+                        print('split srf:',ss)
+                        print('phaseIndex:',phaseIndex)
+                        print('typeIndex:',typeIndex)
+                        print('parent:',parent)
                         o=self.addObject(ss,phaseIndex,typeIndex,parent)
                         if o is None: continue
                         self.setObjectType(o,typeIndex)
                     #rs.EnableRedraw(True)
                 else:
                     splitedSrfs.append(s)
-                    o=None
-                    try:
-                        o=self.addObject(s,phaseIndex,typeIndex,parent)
-                    except Exception as e:
-                        print(e,s,phaseIndex,typeIndex,parent)
-                    if o is None: continue
-                    #print('o=',o)
+                    print('parent=',parent)
+                    print('type=',typeIndex)
+                    print('s=',s)
+                    print('phase=',phaseIndex)
+
+                    o = self.addObject(s,phaseIndex,typeIndex,parent)
+                    if o is None:
+                        continue
                     self.setObjectType(o,typeIndex)
-                    #self.logDataTree()
                 rs.DeleteObject(boundary)
+        #//////////////////////////////////////////////
+        #//// now got all slited surfaces as TYPESRF
+        #//////////////////////////////////////////////
+
         except Exception as e:
-            print('exception:',e)
+            print('850 exception:',e)
+            _Print_Exception()
             #PrintException()
             rs.EnableRedraw(True)
         self.resumeInteraction()
         rs.EnableRedraw(True)
-            #TODO:give properties to splited srfs base on their belonging blocks
-            #splitedSrfs contain the splited srfs
-            #TODO:join the srfs that share the same manifold
-            # for i in range(0,len(splitedSrfs)):
-            #     for j in range(0,len(splitedSrfs)):
-            #         if i==j: continue
+        #TODO:give properties to splited srfs base on their belonging blocks
+        #splitedSrfs contain the splited srfs
+        #TODO:join the srfs that share the same manifold
+        # for i in range(0,len(splitedSrfs)):
+        #     for j in range(0,len(splitedSrfs)):
+        #         if i==j: continue
     def handle_GENBLOCK_combo_updates(self,sender,e):
         # txts=self.form.UI_GENBLOCK.lb_selected_block.Text
         # combo=self.form.UI_GENBLOCK.combo_typeIndex1
@@ -911,3 +950,10 @@ class Engine():
     #         color=SRFTYPECOLORS[index]
     #         rs.ObjectColor(f,color)
     #         counter+=1
+
+def _Print_Exception():
+    exc_type, exc_obj, tb = sys.exc_info()
+    f = tb.tb_frame
+    lineno = tb.tb_lineno
+    filename = f.f_code.co_filename
+    print ('EXCEPTION IN ({}, LINE {})'.format(filename, lineno))

@@ -233,6 +233,7 @@ def demo():
     F=PhaseObject(D,phase='F',typeIndex=322)
 
     print(F.root)
+    print(F.short_guid())
     print(A.tree())
     fo=A.find('phase','F')
     print('found form a',fo)

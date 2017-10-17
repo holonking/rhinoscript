@@ -1,0 +1,9 @@
+cmp	  fixed object duplication in data tree
+cmp   added engine.data as default root for orphan object creation
+bug   Blocks disppear on second time viewSrf
+bug   TypeError('not all arguments converted during string formatting'
+      if Block type1 is not 0
+
+TODO	correctly inherit parent attributes into split srfs
+TODO	relate split srf for mesh generation
+TODO  generate balcony for walls base on adjacent floors
