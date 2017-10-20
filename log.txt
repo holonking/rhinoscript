@@ -1,9 +1,15 @@
 cmp	  fixed object duplication in data tree
 cmp   added engine.data as default root for orphan object creation
-bug   Blocks disppear on second time viewSrf
-bug   TypeError('not all arguments converted during string formatting'
+cmp   Blocks disppear on second time viewSrf
+cmp   fixed TypeError('not all arguments converted during string formatting'
       if Block type1 is not 0
+      because get type color needs an int but got string
 
-TODO	correctly inherit parent attributes into split srfs
-TODO	relate split srf for mesh generation
+wip	correctly inherit parent attributes into split srfs
+wip	relate split srf for mesh generation
+wip aquire blocks from BLOCK layer on initialization
+wip save block types into rhino object name when set block type
+    so that the engines remembers the block type when aquiring from layer
+
+bug   PhaseObject.find_all() requires assign basket=[] explicity
 TODO  generate balcony for walls base on adjacent floors

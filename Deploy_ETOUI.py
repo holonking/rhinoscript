@@ -78,18 +78,19 @@ class MainForm(Form):
         self.tabPanel.Size=Size(200,350)
         self.page_GENBLOCK=TabPage()
         self.page_GENBLOCK.Text='BLK'
-        self.page_GENMASSING=TabPage()
-        self.page_GENMASSING.Text='Mas'
         self.page_GENTYPESRF=TabPage()
         self.page_GENTYPESRF.Text='SRF'
         self.page_GENTYPEMESH=TabPage()
         self.page_GENTYPEMESH.Text='MSH'
         self.page_GENCOMPONENT=None
         tabControl.Pages.Add(self.page_GENBLOCK)
-        tabControl.Pages.Add(self.page_GENMASSING)
         tabControl.Pages.Add(self.page_GENTYPESRF)
         tabControl.Pages.Add(self.page_GENTYPEMESH)
         self.tabPanel.Content=tabControl
+        self.tabControl=tabControl
+
+        self.page_GENTYPESRF.Content=self.gen_GENTYPESRF_row()
+        self.page_GENTYPEMESH.Content=self.gen_GENTYPESRF_row()
 
         #objPanel
         self.objTextBox=TextBox()
@@ -120,21 +121,21 @@ class MainForm(Form):
         layV=StackLayout(Spacing = 2, Orientation = Orientation.Vertical)
         layH=StackLayout(Spacing = 0, Orientation = Orientation.Horizontal)
 
-        bt_view_block=Button()
-        bt_view_block.Text='viewBlock'
-        bt_view_srf=Button()
-        bt_view_srf.Text='viewSrf'
+        # bt_view_block=Button()
+        # bt_view_block.Text='viewBlock'
+        # bt_view_srf=Button()
+        # bt_view_srf.Text='viewSrf'
         bt_interact=Button()
         bt_interact.Text='+Intr'
 
 
         self.UI_GENBLOCK=AttrDict()
-        self.UI_GENBLOCK.bt_view_block=bt_view_block
-        self.UI_GENBLOCK.bt_view_srf=bt_view_srf
+        # self.UI_GENBLOCK.bt_view_block=bt_view_block
+        # self.UI_GENBLOCK.bt_view_srf=bt_view_srf
         self.UI_GENBLOCK.bt_interact=bt_interact
 
-        layH.Items.Add(bt_view_block)
-        layH.Items.Add(bt_view_srf)
+        # layH.Items.Add(bt_view_block)
+        # layH.Items.Add(bt_view_srf)
         layH.Items.Add(bt_interact)
 
         layV.Items.Add(layH)
@@ -250,4 +251,5 @@ class MainForm(Form):
             self.UI_GENTYPESRF.bts2.append(bt2)
             self.UI_GENTYPESRF.combos.append(combo)
 
-        self.page_GENTYPESRF.Content=layV
+        return layV
+        #self.page_GENTYPESRF.Content=layV

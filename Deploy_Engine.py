@@ -63,10 +63,7 @@ class Engine():
         #load data
         #self.data=self.loadData()
         self.data=PhaseObject(phase='Root')
-
-        #print('loaded data:',self.data)
-        #if self.data is None:
-            #self.importSrfTypesFromScene()
+        self.importObjectsFromScene()
 
         #print('imported data:',self.data)
         #print('imported data:')
@@ -78,7 +75,8 @@ class Engine():
         #print('loaded facade types:',self.facadeTypes)
 
         #loggin panel passed from UI
-        self.log_panel=None
+        self.log_panel=None #still in use?
+        self.log_tree_panel=None
 
         #selection
         self.selectedObjects=[]
@@ -107,10 +105,13 @@ class Engine():
         #         txt+=po.tree()
         self.logToTreePanel(txt)
     def logToTreePanel(self,txt):
-        if self.log_tree_panel is None:
-            print('engine.log_panel not set')
-            return
-        else: self.log_tree_panel.Text=txt
+        try:
+            if self.log_tree_panel is None:
+                print('engine.log_panel not set')
+                return
+            else: self.log_tree_panel.Text=txt
+        except:
+            print('engine.log_tree_panel is not yet created')
     def logToObjPanel(self,txt):
         if self.log_obj_panel is None:
             print('engine.log_obj_panel not set')
@@ -168,7 +169,7 @@ class Engine():
         rs.ObjectColor(guid,self.get_color(phase,typeIndex))
         try:
             layer=get_layer_name(phase)
-            print(layer)
+            #print(layer)
             rs.ObjectLayer(guid,layer)
         except Exception as e:print(e)
         #layer=self.get_layer_name(phase)
@@ -189,13 +190,9 @@ class Engine():
 
 
     def deleteObjectByGuid(self,guid):
-        print('deleteObjectsByGuid')
-
         o=self.data.find('guid',guid)
-        print('DELETED OBJ',o)
         if o is not None:
             o.delete()
-
         self.logDataTree()
 
     def deleteObject(self,obj):
@@ -220,7 +217,10 @@ class Engine():
         self.selectedObjects=items
     def highlightSelection(self):
         rs.UnselectAllObjects()
-        guids=self.getGuidFromADs(self.selectedObjects)
+        guids=[]
+        for o in self.selectedObjects:
+            if o.guid is not None:
+                guids.append(o.guid)
         rs.SelectObjects(guids)
 
     #data query and inspections
@@ -252,11 +252,6 @@ class Engine():
             #print(txt)
             return txt
         except:PrintException()
-    def getGuidFromADs(self,oAD):
-        guids=[]
-        for o in oAD:
-            guids.append(o.guid)
-        return guids
     # def getObjectPhaseObject(self,obj,phase):
         #finds the object's up or down stream objects
         phase1=obj.phase
@@ -439,6 +434,7 @@ class Engine():
     def get_color_set1(self,index):
         return COLOR_SET_01[index%len(COLOR_SET_01)]
     def get_color(self,phase='BLOCK',index=0):
+        index=int(index)
         colors=PHASE_OBJECT_COLORS[phase]
         index=index%len(colors)
         color=colors[index]
@@ -452,42 +448,7 @@ class Engine():
 
 
 
-    #assign UI actions
-    def assignAction(self,form):
-        #engine.importSrfTypesFromScene()
-
-        self.form=form
-        form.Closing +=self.onFormCloseEvents
-
-        #assign GENBLOCK button actions
-        form.UI_GENBLOCK.bt_view_block.Click+=self.handle_GENBLOCK_bt_view_block
-        form.UI_GENBLOCK.bt_view_srf.Click+=self.handle_GENBLOCK_bt_view_srf
-        form.UI_GENBLOCK.bt_interact.Click+=self.handle_GENBLOCK_bt_interact
-        form.UI_GENBLOCK.combo_typeIndex1.SelectedIndexChanged+=self.handle_GENBLOCK_combo_updates
-        form.UI_GENBLOCK.combo_typeIndex2.SelectedIndexChanged+=self.handle_GENBLOCK_combo_updates
-        form.UI_GENBLOCK.combo_typeTopIndex.SelectedIndexChanged+=self.handle_GENBLOCK_combo_updates
-
-        #assign GENTYPESRF button actions
-        form.UI_GENTYPESRF.bt_regen.Click+=self.genAllTypeMesh
-        form.UI_GENTYPESRF.bt_view_srf.Click+=self.handle_GENTYPESRF_bt_viewSrf
-        form.UI_GENTYPESRF.bt_view_mesh.Click+=self.handle_GENTYPESRF_bt_viewMesh
-        form.UI_GENTYPESRF.bt_inspect.Click+=self.handle_GENTYPESRF_bt_inspect
-
-        self.loadRhinoEvents()
-
-        self.handle_GENTYPESRF_bts1()
-        self.handle_GENTYPESRF_bts2()
-        self.handle_GENTYPESRF_comboBox()
-
-        self.log_tree_panel=form.treeTextBox
-        self.log_obj_panel=form.objTextBox
-        self.log_rhi_panel=form.rhiTextBox
-
-        #TOOBAR action assignment
-        form.UI_TOOLBAR.bt_delete.Click+=self.handle_TOOLBAR_bt_delete
-
-        self.logDataTree()
-
+#assign UI actions
     def loadRhinoEvents(self):
         print('loading rhino events')
         Rhino.RhinoDoc.EndSaveDocument+=self.saveEngineData
@@ -509,10 +470,11 @@ class Engine():
         pass
 
     def onAddRhinoObject(self,sender,e):
-        obj=rs.FirstObject()
-        isBrep=rs.IsBrep(obj)
-        if self.interaction_mode.auto_block and isBrep:
-            self.addObject(obj,'BLOCK',0,None)
+        if self.interaction_mode.auto_block:
+            obj=rs.FirstObject()
+            isBrep=rs.IsBrep(obj)
+            if isBrep:
+                self.createBlockFromSceneObject(obj)
 
     def onFormCloseEvents(self,sender,e):
         self.save()
@@ -563,7 +525,6 @@ class Engine():
         except:pass
         #combo.SelectedIndex=index
         combo.Text=str(item)
-
     def update_GENBLOCK_PROPS(self):
         try:
             clear=False
@@ -581,6 +542,56 @@ class Engine():
                 self.setComboIndexfromItem(self.form.UI_GENBLOCK.combo_typeIndex2,obj.typeIndices[1])
                 self.setComboIndexfromItem(self.form.UI_GENBLOCK.combo_typeTopIndex,obj.typeIndices[2])
         except:PrintException()
+
+    def assignAction(self,form):
+
+        #engine.importSrfTypesFromScene()
+
+        self.form=form
+        form.Closing +=self.onFormCloseEvents
+
+        #assign tabcontrol page change events
+        form.tabControl.SelectedIndexChanged+=self.handle_tab_change
+
+
+        #assign GENBLOCK button actions
+        # form.UI_GENBLOCK.bt_view_block.Click+=self.handle_GENBLOCK_bt_view_block
+        # form.UI_GENBLOCK.bt_view_srf.Click+=self.handle_GENBLOCK_bt_view_srf
+        form.UI_GENBLOCK.bt_interact.Click+=self.handle_GENBLOCK_bt_interact
+        form.UI_GENBLOCK.combo_typeIndex1.SelectedIndexChanged+=self.handle_GENBLOCK_combo_updates
+        form.UI_GENBLOCK.combo_typeIndex2.SelectedIndexChanged+=self.handle_GENBLOCK_combo_updates
+        form.UI_GENBLOCK.combo_typeTopIndex.SelectedIndexChanged+=self.handle_GENBLOCK_combo_updates
+
+        #assign GENTYPESRF button actions
+        form.UI_GENTYPESRF.bt_regen.Click+=self.genAllTypeMesh
+        form.UI_GENTYPESRF.bt_view_srf.Click+=self.handle_GENTYPESRF_bt_viewSrf
+        form.UI_GENTYPESRF.bt_view_mesh.Click+=self.handle_GENTYPESRF_bt_viewMesh
+        form.UI_GENTYPESRF.bt_inspect.Click+=self.handle_GENTYPESRF_bt_inspect
+
+        self.loadRhinoEvents()
+
+        self.handle_GENTYPESRF_bts1()
+        self.handle_GENTYPESRF_bts2()
+        self.handle_GENTYPESRF_comboBox()
+
+        self.log_tree_panel=form.treeTextBox
+        self.log_obj_panel=form.objTextBox
+        self.log_rhi_panel=form.rhiTextBox
+
+        #TOOBAR action assignment
+        form.UI_TOOLBAR.bt_delete.Click+=self.handle_TOOLBAR_bt_delete
+
+        self.logDataTree()
+
+
+    def handle_tab_change(self,sender,e):
+        index=sender.SelectedIndex
+        if index==0:
+            self.handle_tab_BLOCK()
+        elif index==1:
+            self.handle_tab_TYPESRF()
+        elif index==2:
+            self.handle_tab_MESH()
 
     def handle_TOOLBAR_bt_delete(self,sender,e):
         print('del pressed')
@@ -629,30 +640,28 @@ class Engine():
                 self.engine=engine
                 self.toggle=False
             def handle(self,sender,e):
-                if not self.toggle:
-                    self.toggle=True
-                    rs.UnselectAllObjects()
-                    self.engine.clearSelections()
-                    selection=[]
+                try:
+                    if not self.toggle:
+                        self.toggle=True
+                        rs.UnselectAllObjects()
+                        self.engine.clearSelections()
+                        selection=[]
 
-                    #print('handle bt 1:',self.index)
-
-                    for o in self.engine.data:
-                        # print('bt1 Click:',o.typeIndex,self.index,o.guid)
-                        if o.typeIndex==self.index:
-                            # print('selected')
-                            try:
-                                if rs.IsObject(o.guid):
-                                    selection.append(o)
-                            except Exception as e: print('!except handleBt1 sselect ',e)
-
-                    # print('bt1 Click selection size :',len(selection))
-                    self.engine.setSelection(selection)
-                    self.engine.highlightSelection()
-                else:
-                    self.toggle=False
-                    self.engine.setSelection([])
-                    rs.UnselectAllObjects()
+                        #print('handle bt 1:',self.index)
+                        #impliment:
+                        #select all objects with given typeIndex
+                        print(self.index)
+                        cons=[('typeIndex',self.index)]
+                        sel_objs=self.engine.data.find_all(cons,basket=[])
+                        self.engine.setSelection(sel_objs)
+                        self.engine.highlightSelection()
+                    else:
+                        self.toggle=False
+                        self.engine.setSelection([])
+                        rs.UnselectAllObjects()
+                except Exception as e:
+                    print(e)
+                    _Print_Exception()
 
         from Eto.Drawing import Color
         for i in range(0,len(bts)):
@@ -719,9 +728,9 @@ class Engine():
             combo.SelectedIndexChanged+=handler.handle
         #SelectedIndexChanged
 
-    def handle_GENBLOCK_bt_view_block(self,sender,e):
+    def handle_tab_BLOCK(self):
         self.isolateLayer(get_layer_name('BLOCK'))
-    def handle_GENBLOCK_bt_view_srf(self,sender,e):
+    def handle_tab_TYPESRF(self):
         self.suspendInteraction()
         rs.EnableRedraw(False)
         try:
@@ -732,10 +741,16 @@ class Engine():
             tolerance=0.0001
             self.isolateLayer(layername)
 
-            #delete existing massing srf phase objects
-            selobjs=self.data.find_all([('phase',phaseIndex)])
+            #delete existing TYPESRF phase objects
+            selobjs=self.data.find_all([('phase',phaseIndex)],basket=[])
             for o in selobjs:
+                print('sel:'+str(o))
                 o.delete()
+            #delete other trash on this layer
+            #incase created intentionally or
+            #by products which did not assign a parent
+            trash=rs.ObjectsByLayer(layername)
+            rs.DeleteObjects(trash)
 
             rs.CurrentLayer(layername)
 
@@ -854,10 +869,11 @@ class Engine():
                     print('s=',s)
                     print('phase=',phaseIndex)
 
-                    o = self.addObject(s,phaseIndex,typeIndex,parent)
+                    o = self.addObject(guid=s,phase=phaseIndex,
+                    typeIndex=typeIndex,parent=parent)
                     if o is None:
                         continue
-                    self.setObjectType(o,typeIndex)
+                    #self.setObjectType(o,typeIndex)
                 rs.DeleteObject(boundary)
         #//////////////////////////////////////////////
         #//// now got all slited surfaces as TYPESRF
@@ -876,6 +892,12 @@ class Engine():
         # for i in range(0,len(splitedSrfs)):
         #     for j in range(0,len(splitedSrfs)):
         #         if i==j: continue
+    def handle_tab_MESH(self):
+        print('view mesh clicked')
+        global VIEWMODE
+        VIEWMODE='TYPEMESH'
+        self.isolateLayer(get_layer_name('TYPEMESH'))
+        self.highlightSelection()
     def handle_GENBLOCK_combo_updates(self,sender,e):
         # txts=self.form.UI_GENBLOCK.lb_selected_block.Text
         # combo=self.form.UI_GENBLOCK.combo_typeIndex1
@@ -885,13 +907,22 @@ class Engine():
 
             obj=self.selectedObject
             ui=self.form.UI_GENBLOCK
+
             obj.typeIndices[0]=ui.combo_typeIndex1.Items[ui.combo_typeIndex1.SelectedIndex].Text
             obj.typeIndices[1]=ui.combo_typeIndex2.Items[ui.combo_typeIndex2.SelectedIndex].Text
             obj.typeIndices[2]=ui.combo_typeTopIndex.Items[ui.combo_typeTopIndex.SelectedIndex].Text
+            obj.typeIndex=obj.typeIndices[0]
             colorI=int(obj.typeIndices[0])
             colorI=colorI%len(COLOR_SET_01)
             color=COLOR_SET_01[colorI]
             rs.ObjectColor(obj.guid,color)
+            name='{},{},{},{}'.format(
+                obj.typeIndex,
+                obj.typeIndices[0],
+                obj.typeIndices[0],
+                obj.typeIndices[0]
+            )
+            rs.ObjectName(obj.guid,name)
         except:PrintException()
 
     #update phase object rhino properties
@@ -907,49 +938,27 @@ class Engine():
         #TODO:return the color PHASE_OBJECT_COLORS[phase][typeIndex]
 
     #existing model treatments
-    def importSrfTypesFromScene(self):
+    def createBlockFromSceneObject(self,guid):
+        obj=guid
+        #isBrep=rs.IsBrep(obj)
+        #if self.interaction_mode.auto_block and isBrep:
+        name=rs.ObjectName(obj)
+        notype=False
+        if name is None:
+            notype=True
+        if name=='':
+            notype=True
+        if notype:
+            name='0,0,0,0'
+        types=name.split(',')
+        o=self.addObject(obj,'BLOCK',types[0],None)
+        for i in range(1,len(types)):
+            o.typeIndices[i]=types[i]
 
-        data=[]
-        # srfs=rs.ObjectsByLayer(get_layer_name('TYPESRF'))
-        # for f in srfs:
-        #     #rs.SelectObject(f)
-        #     #rs.ObjectColor(f,(0,0,1))
-        #     po=PhaseObject()
-        #     po.guid=f
-        #     po.phase='TYPESRF'
-        #     po.typeIndex=int(rs.ObjectName(f))
-        #     po.strTypeDescription=rs.ObjectName(f)
-        #     self.updatePhaseObjectColor(po)
-        #     data.append(po)
-        # self.data=data
-        # return
+    def importObjectsFromScene(self):
         objs=rs.ObjectsByLayer(get_layer_name('BLOCK'))
         for o in objs:
-            po=PhaseObject()
-            po.guid=o
-            po.phase='BLOCK'
-            name=rs.ObjectName(o)
-            typeIndex=0
-            try: typeIndex=int(name)
-            except:pass
-            print(name,typeIndex)
-            self.setObjectType(po,typeIndex,0)
-            data.append(po)
-
-        self.data=data
-    # def fixCurrentModel(self):
-    #     #fix srf in current scene
-    #     layer=get_layer_name('TYPESRF')
-    #     srfs=rs.ObjectsByLayer(layer)
-    #     counter=0
-    #     global SRFTYPECOLORS
-    #     for f in srfs:
-    #         rs.ObjectLayer(f,layer)
-    #         typeindex=int(rs.ObjectName(f))
-    #         index=typeindex%len(SRFTYPECOLORS)
-    #         color=SRFTYPECOLORS[index]
-    #         rs.ObjectColor(f,color)
-    #         counter+=1
+            self.createBlockFromSceneObject(o)
 
 def _Print_Exception():
     exc_type, exc_obj, tb = sys.exc_info()

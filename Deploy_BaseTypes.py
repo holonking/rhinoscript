@@ -89,21 +89,26 @@ class PhaseObject():
         if self.children_count()==0:return True
         return False
 
+    #TODO: bug in find_all
+    #currently needs to call basket=[] explicity
     def find_all(self,name_val_pairs,basket=[]):
         #usage:
         #conditions=[('phase','BLOCK'),('typeIndex',1)]
         #tree.find_all(conditions)
         match=True
         for name,val in name_val_pairs:
+            print('{}->matching:{} to {},basket={}'.format(str(self),self.__dict__[name],val,len(basket)))
             if self.__dict__[name] != val:
                 match=False
                 break
+
         if match:
             basket.append(self)
+        #print('match={},basket={}'.format(match,len(basket)))
 
         for c in self.children:
             basket=c.find_all(name_val_pairs,basket)
-
+        #print('post children match={},basket={}'.format(match,len(basket)))
         return basket
     def find_all_guids(self,name_val_pairs,basket=[]):
         match=True
@@ -198,10 +203,10 @@ class PhaseObject():
             print('parent is None, so making a root node')
             return
         if self.parent is not None:
-            print('removing node from previous parent')
+            #print('removing node from previous parent')
             self.parent.remove_child(self)
         #add_child already sets parent
-        print('setting parent to',parent.short_guid())
+        #print('setting parent to',parent.short_guid())
         parent.add_child(self)
         #update children level
         #for c in self.children:
@@ -217,8 +222,12 @@ class PhaseObject():
         self.children.append(child)
         #child.level=self.level+1
 
+    def delete_branches(self):
+        if self.children:
+            for c in self.children:
+                c.delete()
+
     def delete(self):
-        #print('@PhaseObject.delete self.parent=',self.parent)
         if self.parent is not None:
             #print('removing self from',self.parent)
             self.parent.remove_child(self)
@@ -256,15 +265,20 @@ def demo():
     print(A.tree())
     fo=A.find('phase','F')
     print('found form a',fo)
-
+    print('--------find 322------')
     cons=[('typeIndex',322)]
     fos=A.find_all(cons)
     print('find_all:')
     for o in fos:
-        print(o)
+        print(str(o))
+    print('--------find B--------')
+    cons=[('phase','B')]
+    fos=A.find_all(cons,basket=[])
+    print('find_all:')
+    for o in fos:
+        print(str(o))
 
-
-    print('----------------')
+    print('--------delete B--------')
 
     B.delete()
     print(A.tree())
