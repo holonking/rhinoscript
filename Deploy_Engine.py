@@ -90,6 +90,8 @@ class Engine():
         self.interaction_mode=AttrDict()
         self.interaction_mode.auto_block=True
 
+        self.model_invalidated=False
+
     def suspendInteraction(self):
         self.interaction_mode.auto_block=False
     def resumeInteraction(self):
@@ -345,6 +347,7 @@ class Engine():
         pass
     def genTypeMesh(self,typeIndex=None):
         #if not typeIndex given, will regenerate all types
+        print('genTypeMesh')
         rs.EnableRedraw(False)
         meshes=[]
         srfs=[]
@@ -354,40 +357,40 @@ class Engine():
         layerName=get_layer_name('TYPEMESH')
         #remove existing mesh
         try:
-            self.deleteObjects(phaseIndex,typeIndex)
-        except Exception as e:print('except at delete :',e)
+            #delete from data
+            cons=[('phase','TYPEMESH')]
+            selObjs=self.data.find_all(cons,basket=[])
+            if selObjs:
+                for o in selObjs:
+                    o.delete()
+            #clean up other artifacts on this layer
+            selguid=rs.ObjectsByLayer(layerName)
+            rs.DeleteObjects(selguid)
 
-        #find all the TYPESRF
-        try:
-            srfs=self.getObject(upStreamIndex,typeIndex)
-        except Exception as e: print('except genTypeMesh->self.getObject:',e)
-        for o  in srfs:
-            if typeIndex is not None:
-                if not o.typeIndex==typeIndex: continue
-
-            #typeI=typeIndex%len(self.facadeTypes)
-            typeI=o.typeIndex
-            #print('typeI:',typeI,self.facadeTypes)
-            try:
-                facadeType=self.facadeTypes[typeI]
-                #print('facade type: ',facadeType)
-            except Exception as e:
-                print('exception in getting self.facadeTypes',e)
-                #rs.EnableRedraw(True)
-                return
-            try:
-                m=divideSrfToPattern(o.guid,facadeType)
-                if rs.IsObject(m):
-                    rs.ObjectLayer(m,layerName)
-                    self.addObject(m,phaseIndex,typeI,o)
-            except Exception as e:
-                #rs.EnableRedraw(True)
-                print('exception in divideSrfToPattern:',Exception,':',e)
-                #rs.EnableRedraw(True)
+            #find all the TYPESRF
+            #srfs=self.getObject(upStreamIndex,typeIndex)
+            cons=[('phase','TYPESRF')]            
+            selObjs=self.data.find_all(cons,basket=[])
+            print('{} objects selected'.format(len(selObjs)))
+            for o in selObjs:
+                if typeIndex is not None:
+                    if o.typeIndex!=typeIndex:
+                        continue
+                elif o.typeIndex is None:
+                    continue
+                else:
+                    typeI=o.typeIndex
+                    facadeType=self.facadeTypes[typeI]
+                    
+                    m=divideSrfToPattern(o.guid,facadeType)
+                    if rs.IsObject(m):
+                        rs.ObjectLayer(m,layerName)
+                        self.addObject(m,phaseIndex,typeI,o)
+        except Exception as e:
+            _Print_Exception()
+            print(e)
+            rs.EnableRedraw(True)
         rs.EnableRedraw(True)
-        #generate new mesh
-    def genAllTypeMesh(self,sender,e):
-        self.genTypeMesh()
 
     #checked "self."
     #library and static variables managements
@@ -475,6 +478,7 @@ class Engine():
             isBrep=rs.IsBrep(obj)
             if isBrep:
                 self.createBlockFromSceneObject(obj)
+                self.data.invalidate()
 
     def onFormCloseEvents(self,sender,e):
         self.save()
@@ -563,7 +567,7 @@ class Engine():
         form.UI_GENBLOCK.combo_typeTopIndex.SelectedIndexChanged+=self.handle_GENBLOCK_combo_updates
 
         #assign GENTYPESRF button actions
-        form.UI_GENTYPESRF.bt_regen.Click+=self.genAllTypeMesh
+        form.UI_GENTYPESRF.bt_regen.Click+=self.handle_regen
         form.UI_GENTYPESRF.bt_view_srf.Click+=self.handle_GENTYPESRF_bt_viewSrf
         form.UI_GENTYPESRF.bt_view_mesh.Click+=self.handle_GENTYPESRF_bt_viewMesh
         form.UI_GENTYPESRF.bt_inspect.Click+=self.handle_GENTYPESRF_bt_inspect
@@ -583,6 +587,8 @@ class Engine():
 
         self.logDataTree()
 
+    def handle_regen(self,sender,e):
+        self.genTypeMesh()
 
     def handle_tab_change(self,sender,e):
         index=sender.SelectedIndex
@@ -805,7 +811,7 @@ class Engine():
 
             print('assign parent objects')
             #Union block的横竖面找parent
-
+            print('obj_blocks len={}'.format(len(obj_blocks)))
             for po in obj_blocks:
                 srfs=rs.ExplodePolysurfaces(po.guid,False)
                 for i in range(len(vertSrfs)):
@@ -897,7 +903,10 @@ class Engine():
         global VIEWMODE
         VIEWMODE='TYPEMESH'
         self.isolateLayer(get_layer_name('TYPEMESH'))
-        self.highlightSelection()
+        #self.highlightSelection()
+        self.genTypeMesh()
+
+
     def handle_GENBLOCK_combo_updates(self,sender,e):
         # txts=self.form.UI_GENBLOCK.lb_selected_block.Text
         # combo=self.form.UI_GENBLOCK.combo_typeIndex1
@@ -943,17 +952,17 @@ class Engine():
         #isBrep=rs.IsBrep(obj)
         #if self.interaction_mode.auto_block and isBrep:
         name=rs.ObjectName(obj)
-        notype=False
         if name is None:
-            notype=True
+            name='0'
         if name=='':
-            notype=True
-        if notype:
-            name='0,0,0,0'
+            name='0'
         types=name.split(',')
-        o=self.addObject(obj,'BLOCK',types[0],None)
-        for i in range(1,len(types)):
-            o.typeIndices[i]=types[i]
+        o=self.addObject(obj,'BLOCK',int(types[0]),None)
+        if len(types)==1:
+            o.typeIndices[0]=types[0]
+        else:
+            for i in range(1,len(types)):
+                o.typeIndices[i-1]=types[i]
 
     def importObjectsFromScene(self):
         objs=rs.ObjectsByLayer(get_layer_name('BLOCK'))

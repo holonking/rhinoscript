@@ -4,12 +4,16 @@ cmp   Blocks disppear on second time viewSrf
 cmp   fixed TypeError('not all arguments converted during string formatting'
       if Block type1 is not 0
       because get type color needs an int but got string
+cmp	correctly inherit parent attributes into split srfs
+cmp	relate split srf for mesh generation
+cmp     aquire blocks from BLOCK layer on initialization
 
-wip	correctly inherit parent attributes into split srfs
-wip	relate split srf for mesh generation
-wip aquire blocks from BLOCK layer on initialization
 wip save block types into rhino object name when set block type
     so that the engines remembers the block type when aquiring from layer
+wip add PhaseObject.structure attr to differentiate 'wall','floor',and 'ceiling'
 
 bug   PhaseObject.find_all() requires assign basket=[] explicity
 TODO  generate balcony for walls base on adjacent floors
+TODO  generate actual component for demo
+TODO  think about invalidation
+

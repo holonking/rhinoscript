@@ -31,6 +31,15 @@ class AttrDict(dict):
         super(dict,self).__init__(*args, **kwargs)
         self.__dict__ = self
 
+class ConceptStruct(dict):
+    def __init__():
+        super().__init__()
+        self.none='CONCEPT_NONE'
+        self.wall='CONCEPT_WALL'
+        self.floor='CONCEPT_FLOOR'
+        self.ceiling='CONCEPT_CEILING'
+CS=ConceptStruct()
+
 class PhaseObject():
     def __init__(self, parent=None,phase='None',typeIndex=0,guid=None,*args, **kwargs):
         #super(AttrDict,self).__init__(*args, **kwargs)
@@ -51,13 +60,12 @@ class PhaseObject():
         self.typeIndices=[0]*10
         self.is_selected=False
         self.description=''
+        self.structure=CS.CONCEPT_NONE  
     def __str__(self):
-        txt=self.phase+'( {} )_{}'.format(len(self.children),self.typeIndex)
-        if self.guid is not None:
-            txt+=shortGuid(self.guid)
-        return txt
-    def to_string(self):
-        txt=self.phase+'( {} )_{}'.format(len(self.children),self.typeIndex)
+        update='F'
+        if self.needUpdate:
+            update='T'
+        txt=self.phase+'( {} )_{}_invalidated({})'.format(len(self.children),self.typeIndex,update)
         if self.guid is not None:
             txt+=shortGuid(self.guid)
         return txt
@@ -73,6 +81,17 @@ class PhaseObject():
 
     def children_count(self):
         return len(self.children)
+    
+    def invalidate(self):
+        self.needUpdate=True
+        for c in self.children:
+            c.invalidate()
+
+    def validate(self):
+        self.needUpdate=False
+        for c in self.children:
+            c.validate()
+        
 
     def is_root(self):
         if self.parent is None:
@@ -97,7 +116,7 @@ class PhaseObject():
         #tree.find_all(conditions)
         match=True
         for name,val in name_val_pairs:
-            print('{}->matching:{} to {},basket={}'.format(str(self),self.__dict__[name],val,len(basket)))
+            #print('{}->matching:{} to {},basket={}'.format(str(self),self.__dict__[name],val,len(basket)))
             if self.__dict__[name] != val:
                 match=False
                 break
@@ -259,7 +278,9 @@ def demo():
     F.set_parent(B)
     D.set_parent(F)
 
-
+    #invalidate will invalidate all children from a node down
+    B.invalidate()
+    #F.validate()
     print(F.root)
     print(F.short_guid())
     print(A.tree())
