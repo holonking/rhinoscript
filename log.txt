@@ -7,13 +7,15 @@ cmp   fixed TypeError('not all arguments converted during string formatting'
 cmp	correctly inherit parent attributes into split srfs
 cmp	relate split srf for mesh generation
 cmp     aquire blocks from BLOCK layer on initialization
+cmp broke down rstools into files in RsTools module
+cmp fisrt attempt to add morph for block
 
-wip save block types into rhino object name when set block type
+TODO think about morph scipt/shape grammar
+TODO save block types into rhino object name when set block type
     so that the engines remembers the block type when aquiring from layer
-wip add PhaseObject.structure attr to differentiate 'wall','floor',and 'ceiling'
+TODO add PhaseObject.structure attr to differentiate 'wall','floor',and 'ceiling'
 
 bug   PhaseObject.find_all() requires assign basket=[] explicity
 TODO  generate balcony for walls base on adjacent floors
 TODO  generate actual component for demo
 TODO  think about invalidation
-

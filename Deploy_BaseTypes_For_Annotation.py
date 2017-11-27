@@ -164,7 +164,7 @@ class PhaseObject():
             leader=L if is_end_node else T
         name=str(self)
         #name=self.phase+'({})'.format(len(self.children))
-        #name=name+'_'+shortGuid(self.guid)+'_'+str(self.typeIndex)
+        #name=name+'_'+short_guid(self.guid)+'_'+str(self.typeIndex)
         if self.is_selected:
             #name+=SELECT
             name='▌ '+name
