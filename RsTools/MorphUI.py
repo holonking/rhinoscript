@@ -2,7 +2,7 @@ from collections import OrderedDict
 
 import clr
 clr.AddReference("Eto")
-from Eto.Forms import Form,Panel,Dialog, Label, TabControl,ComboBox, TabPage, TextBox, TextArea,StackLayout,StackLayoutItem, Orientation, Button,HorizontalAlignment, MessageBox
+from Eto.Forms import Form,Panel,Dialog, Label, GroupBox, TabControl,ComboBox, TabPage, TextBox, TextArea,StackLayout,StackLayoutItem, Orientation, Button,HorizontalAlignment, MessageBox
 from Eto.Drawing import *
 
 import rsTools
@@ -64,6 +64,10 @@ class FormEditParam(Form):
         #override this methos
         pass
 
+class ParamInput(GroupBox):
+    def __init__(self):
+        pass
+
 
 class ShapeBase():
     def __init__(self):
@@ -103,7 +107,7 @@ class ShapeBase():
         #override
         pass
 
-class Shape1():
+class Shape1(ShapeBase):
     def set_param(self):
         self.param = OrderedDict({'w1': 0.4, 'w2': 0.5, 'w3': 0.1})
     def on_update(self, param):

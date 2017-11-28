@@ -14,3 +14,4 @@ brepid=sel[0]
 shape=rtm.Shape1()
 shape.set_box(brepid)
 shape.show_params()
+
