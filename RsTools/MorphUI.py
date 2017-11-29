@@ -64,9 +64,63 @@ class FormEditParam(Form):
         #override this methos
         pass
 
-class ParamInput(GroupBox):
+class DefaultButton(Button):
+    def __init__(self,text='+',size=(40,40)):
+        super(DefaultButton,self).__init__()
+        self.Size=Size(size[0],size[1])
+        self.Text=text
+
+class ParamInput(StackLayout):
+    def __init__(self,name='param',value=0):
+        super(ParamInput,self).__init__()
+        self.Spacing = 0
+        self.Orientation = Orientation.Vertical
+        self.name=name
+        self.name_label=Label()
+        self.name_label.Text=self.name
+        self.name_label.Size=Size(40,20)
+
+        self.value=value
+        self.value_textbox=TextBox()
+        self.value_textbox.Text='ua'
+        self.value_textbox.Size=Size(40,20)
+
+        self.Items.Add(self.name_label)
+        self.Items.Add(self.value_textbox)
+
+class ParamRow(StackLayout):
     def __init__(self):
-        pass
+        super(ParamRow, self).__init__()
+
+        self.Spacing=0
+        self.Orientation = Orientation.Horizontal
+        self.add_button=DefaultButton()
+        self.add_button.Click+=self.add_param_input
+        self.param_list=[]
+        self.Items.Add(self.add_button)
+
+    def add_param_input(self, sender, e):
+        try:
+            name='p'+str(len(self.param_list))
+            value=0
+            param_input = ParamInput(name, value)
+            self.Items.Add(param_input)
+            self.param_list.append(param_input)
+        except Exception as e:
+            print(e)
+
+
+
+class ParamForm(Form):
+    def __init__(self):
+        self.Size=Size(500,500)
+        layV=StackLayout(Orientation=Orientation.Vertical)
+
+        layV.Items.Add(ParamRow())
+        self.Content=layV
+
+
+
 
 
 class ShapeBase():

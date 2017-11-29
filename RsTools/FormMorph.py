@@ -50,7 +50,7 @@ def is_solid_box(brepid):
             return False
 
     if counter == 6:
-        print(edge_pts[0][0],edge_pts[1][0])
+        #print(edge_pts[0][0],edge_pts[1][0])
         if edge_pts[0][0].Z>edge_pts[1][0].Z:
             arrx= edges[0].ClosestPoint(edge_pts[1][0])
             cp = edges[0].PointAt(arrx[1])
@@ -72,7 +72,7 @@ def is_solid_box(brepid):
     return False,None
 
 
-def box_div_h(brepids,ratio=[0.5,0.5],names=None,delete_input=False):
+def box_div_v(brepids, ratio=[0.5, 0.5], names=None, delete_input=False):
     if isinstance(brepids,dict):
         brepids=brepids.values()
     elif not isinstance(brepids,list):
@@ -97,7 +97,32 @@ def box_div_h(brepids,ratio=[0.5,0.5],names=None,delete_input=False):
         return comps
     return None
 
-def box_div_v(brepids,ratio=[0.6,0.4],names=None,delete_input=False):
+def box_div_u(brepids, ratio=[0.5, 0.5], names=None, delete_input=False):
+    if isinstance(brepids,dict):
+        brepids=brepids.values()
+    elif not isinstance(brepids,list):
+        brepids=[brepids]
+    comps = []
+    for brepid in brepids:
+        flag,org_vects=is_solid_box(brepid)
+        vect=Vector3d(0,0,0)
+        if flag:
+            for i in range(len(ratio)):
+                r=ratio[i]
+                if r==0:
+                    continue
+                comp=genbox_from_org_vects(org_vects,(r,1,1))
+                if i>0:
+                    vect=vect+org_vects[1]*ratio[i-1]
+                    rs.MoveObject(comp,vect)
+                comps.append(comp)
+    if delete_input:
+        rs.DeleteObjects(brepids)
+    if len(comps)>0:
+        return comps
+    return None
+
+def box_div_w(brepids,ratio=[0.6,0.4],names=None,delete_input=False,ratio_mode=True):
     if isinstance(brepids, dict):
         brepids = brepids.values()
     elif not isinstance(brepids,list):
@@ -111,9 +136,17 @@ def box_div_v(brepids,ratio=[0.6,0.4],names=None,delete_input=False):
                 r = ratio[i]
                 if r==0:
                     continue
-                comp = genbox_from_org_vects(org_vects, (1, 1, r))
+                if ratio_mode:
+                    scale=(1, 1, r)
+                else:
+                    scale=(org_vects[1].Length,org_vects[2].Length,r)
+                comp = genbox_from_org_vects(org_vects, scale,ratio_mode=ratio_mode)
+
                 if i > 0:
-                    vect = vect+org_vects[3] * ratio[i - 1]
+                    if ratio_mode:
+                        vect = vect + org_vects[3] * ratio[i - 1]
+                    else:
+                        vect = vect + rs.VectorUnitize(org_vects[3]) * ratio[i - 1]
                     rs.MoveObject(comp, vect)
                 comps.append(comp)
     if delete_input:
@@ -122,11 +155,25 @@ def box_div_v(brepids,ratio=[0.6,0.4],names=None,delete_input=False):
         return comps
     return None
 
-def genbox_from_org_vects(org_vects,scale=(1,1,1)):
+def genbox_from_org_vects(org_vects,scale=(1,1,1),centered=False, ratio_mode=True):
     org=org_vects[0]
-    u=org_vects[1]*scale[0]
-    v=org_vects[2]*scale[1]
-    w=org_vects[3]*scale[2]
+    #print('    ratio_mode:',ratio_mode,scale)
+    if ratio_mode:
+        u=org_vects[1]*scale[0]
+        v=org_vects[2]*scale[1]
+        w=org_vects[3]*scale[2]
+    else:
+        u = rs.VectorUnitize(org_vects[1]) * scale[0]
+        v = rs.VectorUnitize(org_vects[2]) * scale[1]
+        w = rs.VectorUnitize(org_vects[3]) * scale[2]
+
+    if centered:
+        off_u = (u - org_vects[1]) / 2
+        off_v = (v - org_vects[2]) / 2
+        off_w = (w - org_vects[3]) / 2
+        org -= off_u
+        org -= off_v
+        #org -= off_w
 
     pts=[]
     pts.append(org)
@@ -141,5 +188,10 @@ def genbox_from_org_vects(org_vects,scale=(1,1,1)):
     rs.DeleteObjects([poly])
     return box
 
+def move(o,transform,org_vects):
+    vu=org_vects[1]*transform[0]
+    vv=org_vects[2]*transform[1]
+    vw=org_vects[3]*transform[2]
+    trans=vu+vv+vw
 
-
+    rs.MoveObject(o,trans)
