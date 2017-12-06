@@ -5,7 +5,7 @@ import rhinoscriptsyntax as rs
 TOLERANCE = 0.0001
 import RsTools.Analysis as rta
 import RsTools.Divide as rtd
-import RsTools.Mesh as rtm
+import RsTools.MeshTools as rtm
 from RsTools.Types import *
 
 
