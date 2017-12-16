@@ -14,11 +14,13 @@ class BOX_FACE_ID:
     bottom=4
     top=5
 
-def create_mesh_box(plane=Plane.WorldXY,size=Vector3d(0,0,0)):
-    org = plane.Origin
-    x = plane.XAxis
-    y = plane.YAxis
-    z = plane.ZAxis
+def create_mesh_box(position=Point3d(0,0,0),
+                    vects=(Vector3d(1,0,0),Vector3d(0,1,0),Vector3d(0,0,1)),
+                    size=Vector3d(0,0,0)):
+    org = position
+    x = vects[0]
+    y = vects[1]
+    z = vects[2]
     ax = size[0] * x
     ay = size[1] * y
     az = size[2] * z
@@ -39,9 +41,9 @@ def create_mesh_box(plane=Plane.WorldXY,size=Vector3d(0,0,0)):
     #front and back
 
     meshpts=[]
-    #front
+    #front back
     meshpts+=[Point3d(pts[0]),Point3d(pts[1]),Point3d(pts[5]),Point3d(pts[4])]
-    meshpts+=[Point3d(pts[2]), Point3d(pts[6]), Point3d(pts[7]), Point3d(pts[3])]
+    meshpts+=[Point3d(pts[2]), Point3d(pts[3]), Point3d(pts[7]), Point3d(pts[6])]
     #left right
     meshpts += [Point3d(pts[3]), Point3d(pts[0]), Point3d(pts[4]), Point3d(pts[7])]
     meshpts += [Point3d(pts[5]), Point3d(pts[1]), Point3d(pts[2]), Point3d(pts[6])]
