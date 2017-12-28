@@ -8,7 +8,7 @@ eg=sg.ENGINE
 rs.EnableRedraw(False)
 
 eg.clear()
-eg.add_name('start')
+eg.add_name('init')
 
 
 

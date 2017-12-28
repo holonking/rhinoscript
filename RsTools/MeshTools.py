@@ -16,7 +16,7 @@ class BOX_FACE_ID:
 
 def create_mesh_box(position=Point3d(0,0,0),
                     vects=(Vector3d(1,0,0),Vector3d(0,1,0),Vector3d(0,0,1)),
-                    size=Vector3d(0,0,0)):
+                    size=Vector3d(0,0,0),normals=None):
     org = position
     x = vects[0]
     y = vects[1]
@@ -56,9 +56,43 @@ def create_mesh_box(position=Point3d(0,0,0),
         faces.append((j,j+1,j+2,j+3))
         j+=4
 
-    mesh_id = rs.AddMesh(meshpts,faces)
+    mesh_id = rs.AddMesh(meshpts,faces,normals)
     return mesh_id
 
+def get_face_info(meshface):
+    total_width = meshface.Vertices[1].DistanceTo(meshface.Vertices[0])
+    total_height = meshface.Vertices[2].DistanceTo(meshface.Vertices[1])
+    vect_u = rs.VectorUnitize( meshface.Vertices[1] - meshface.Vertices[0] )
+    vect_v = rs.VectorUnitize( meshface.Vertices[2] - meshface.Vertices[1] )
+    return total_width,total_height,vect_u,vect_v
+
+def scale_face(meshface,scale=[1,1], ratio_mode=True, offset=None):
+    W,H,U,V=get_face_info(meshface)
+    if ratio_mode:
+        size_u=scale[0]*W
+        size_v=scale[1]*H
+    else:
+        size_u=scale[0]
+        size_v=scale[1]
+    size=[size_u,size_v]
+
+    u=U
+    v=V
+    #u=rs.VectorUnitize(U)
+    #v=rs.VectorUnitize(V)
+
+    pts=[]
+    pts.append(Point3d(meshface.Vertices[0]))
+    pts.append(pts[0] + (u * size[0]))
+    pts.append(pts[1] + (v * size[1]))
+    pts.append(pts[0] + (v * size[1]))
+
+    if offset:
+        for i in range(len(pts)):
+            pts[i]=pts[i]+offset
+
+    face=addMeshQuad(pts)
+    return face
 
 def box_face(mesh, index=BOX_FACE_ID.front, add_doc=True):
     try:

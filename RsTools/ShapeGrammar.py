@@ -67,6 +67,9 @@ class Geometry():
     def get_length(self,direction):
         return self.vects[direction].Length
 
+
+
+
 class ShapeBox(Geometry):
     def get_shape(self, guid):
         flag,org_vect=rtf.is_solid_box(guid)

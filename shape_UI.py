@@ -5,6 +5,7 @@ import clr
 
 clr.AddReference("Eto")
 clr.AddReference("Rhino.UI")
+
 from Rhino.UI import *
 import Eto
 import Eto.Forms as EForms
@@ -28,19 +29,51 @@ class RuleSlider(Slider):
             except Exception as e:
                 print(e)
 
+class NamePanel(Panel):
+    def __init__(self):
+        layV = StackLayout(Spacing=0, Orientation=Orientation.Vertical)
+        self.layout=layV
+        self.Content = layV
+        self.Size=Size(70,600)
+        self.button_size=Size(70,20)
 
+    def add_name(self,name,color):
+        bt = Button()
+        bt.Text=name
+        bt.Size=self.button_size
+        bt.BackgroundColor = Color(color[0] / 255.0, color[1] / 255.0, color[2] / 255.0)
+        self.layout.Items.Add(bt)
+        return bt
+
+class RulePanel(Panel):
+    def __init__(self):
+        layV = StackLayout(Spacing=0, Orientation=Orientation.Vertical)
+        self.Size = Size(300, 600)
+        self.Content = layV
+        self.tb_rules = TextBox()
+        self.tb_rules.Size = Size(300, 450)
+        self.tb_rules.Text = 'asd'
+        self.tb_guid = TextBox()
+        self.tb_guid.Size=Size(300,20)
+        self.tb_guid.Text='selected guid'
+        self.slider = RuleSlider()
+        self.slider.Size = Size(280, 100)
+        self.slider.MinValue = 0
+        layV.Items.Add(self.tb_rules)
+        layV.Items.Add(self.tb_guid)
+        layV.Items.Add(self.slider)
 
 class ShapeForm(Form):
     def __init__(self):
-        layV = StackLayout(Spacing=0, Orientation=Orientation.Vertical)
-        self.Size=Size(300,600)
-        self.Content = layV
-        self.tb_rules=TextBox()
-        self.tb_rules.Size=Size(300,500)
-        self.tb_rules.Text='asd'
-        self.slider=RuleSlider()
-        self.slider.Size=Size(280,100)
-        self.slider.MinValue=0
-        layV.Items.Add(self.tb_rules)
-        layV.Items.Add(self.slider)
+        layH = StackLayout(Spacing=0, Orientation=Orientation.Horizontal)
+        self.Size=Size(500,600)
+        self.rules=RulePanel()
+        self.names=NamePanel()
+        self.Content=layH
+
+        layH.Items.Add(self.rules)
+        layH.Items.Add(self.names)
+
+
+
 
