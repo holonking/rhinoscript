@@ -7,9 +7,10 @@ from Rhino.Geometry import *
 
 
 sg.reset()
+
 #massing
-b=sg.create_box(Point3d(56,20,80),name='start')
-sg.add_rhino_box('init',given_name='start')
+#b=sg.create_box(Point3d(56,20,80),name='start')
+sg.add_rhino_box('resid',given_name='start')
 sg.divide_z('start',[0.9,0.1],['bot','A'])
 sg.scale_x('A',0.9,sg.Align.W)
 sg.divide_x('bot',[0.2,0.8],['A','B'])

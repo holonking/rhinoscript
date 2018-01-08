@@ -205,19 +205,19 @@ class Engine():
         for guid in guids:
             o = self.data.find('guid', guid)
             if o is not None:
-                o.delete()
+                o.unstage()
         self.logDataTree()
 
     def deleteObjectByGuid(self, guid):
         o = self.data.find('guid', guid)
         if o is not None:
-            o.delete()
+            o.unstage()
         self.logDataTree()
 
     def deleteObject(self, obj):
         if obj is None: return None
         # if rs.IsObject(obj.guid): rs.DeleteObject(obj.guid)
-        obj.delete()
+        obj.unstage()
 
     def deleteObjects(self, phase, typeIndex=None):
         # deletes objects off the same phase and type index
@@ -225,7 +225,7 @@ class Engine():
         cons = [('phase', phase), ('typeIndex', typeIndex)]
         fos = self.data.find_all(cons)
         for o in fos:
-            o.delete()
+            o.unstage()
 
     # selection management
     def clearSelections(self):
@@ -399,7 +399,7 @@ class Engine():
             selObjs = self.data.find_all(cons, basket=[])
             if selObjs:
                 for o in selObjs:
-                    o.delete()
+                    o.unstage()
             # clean up other artifacts on this layer
             selguid = rs.ObjectsByLayer(layerName)
             rs.DeleteObjects(selguid)
@@ -649,7 +649,7 @@ class Engine():
         print('del pressed')
         if self.selectedObject:
             print('deleting:', self.selectedObject.to_string())
-            self.selectedObject.delete()
+            self.selectedObject.unstage()
         self.logDataTree()
 
     def handle_GENTYPESRF_bt_viewSrf(self, sender, e):
@@ -810,7 +810,7 @@ class Engine():
             selobjs = self.data.find_all([('phase', phaseIndex)], basket=[])
             for o in selobjs:
                 print('sel:' + str(o))
-                o.delete()
+                o.unstage()
             # delete other trash on this layer
             # incase created intentionally or
             # by products which did not assign a parent

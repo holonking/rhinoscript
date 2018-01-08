@@ -21,6 +21,8 @@ ADDSTEPS=True
 COLORIZE=True
 COLORONSTEP=True
 
+
+
 rs.AddLayer(GENLAYER)
 rs.AddLayer(GENHIDDEN)
 
@@ -177,6 +179,7 @@ class Geometry():
     def stage(self):
         self._staged=True
 
+
     def hide(self):
         self._visible=False
         rs.HideObject(self.guid)
@@ -187,6 +190,7 @@ class Geometry():
 
     def delete(self):
         self.unstage()
+        rs.ShowObject(self.guid)
         rs.DeleteObject(self.guid)
 
     def select(self):
@@ -204,7 +208,7 @@ class Geometry():
             ENGINE.add(geo)
         return geo
 
-    def extract_face(self, directions='S'):
+    def extract_face(self, directions=['S']):
         outfaces = []
         try:
             mesh=rs.coercemesh(self.guid)
@@ -244,6 +248,22 @@ class Geometry():
             size = Vector3d(self.size[1], self.size[2],0)
             face = GeoFace(guid, pos, vects, size)
             outfaces.append(face)
+        if 'T' in directions:
+            i = rtm.BOX_FACE_ID.top
+            guid = rtm.box_face(mesh, i)
+            pos = Point3d(self.position)
+            vects =self.vects
+            size = Vector3d(self.size[1], self.size[2], 0)
+            face = GeoFace(guid, pos, vects, size)
+            outfaces.append(face)
+        if 'B' in directions:
+            i = rtm.BOX_FACE_ID.bottom
+            guid = rtm.box_face(mesh, i)
+            pos = Point3d(self.position)
+            vects =self.vects
+            size = Vector3d(self.size[1], self.size[2], 0)
+            face = GeoFace(guid, pos, vects, size)
+            outfaces.append(face)
         return outfaces
 
 class GeoGroup(Geometry):
@@ -281,10 +301,24 @@ class GeoGroup(Geometry):
         rs.ShowObjects(self._components)
 
     def delete(self):
-        self.unstage()
-        for o in self._components:
-            o.unstage()
-        #rs.DeleteObjects(self._components)
+        rs.DeleteObjects(self._components)
+
+    def unstage(self):
+        self._staged = False
+        self.hide()
+
+    def stage(self):
+        self._staged = True
+        self.show()
+
+    def hide(self):
+        self._visible = False
+        rs.HideObjects(self._components)
+
+    def show(self):
+        self._visible = True
+        rs.ShowObjects(self._components)
+
 
     def select(self):
         rs.SelectObjects(self._components)
@@ -338,6 +372,10 @@ class Engine():
 
 
     def _reset(self):
+        try:
+            self._delete_all()
+        except:
+            pass
         self.data = []
         self.step = 0
         self.step_texts = []
@@ -347,10 +385,22 @@ class Engine():
         self.name_color_wheel=rtc.ColorWheel()
         self._attach_rhino_events()
         self._named_colors={}
+        self._mapped_components={}
+        try:
+            print(' hidden count:{}'.format(len(self._hidden_rhino_objects)))
+            rs.EnableRedraw(False)
+            for i in range(len(self._hidden_rhino_objects)):
+                id=self._hidden_rhino_objects.pop()
+                rs.ShowObject(id)
+            if ENABLEDARAW:
+                rs.EnableRedraw(True)
+        except Exception as e:
+            print(e)
+            self._hidden_rhino_objects=[]
         try:
             self.ui.tb_rules.Text = ''
         except:
-            print('unable to reset text')
+            print('unable to reset ui text')
             pass
 
     def _attach_rhino_events(self):
@@ -366,10 +416,10 @@ class Engine():
 
     def show_ui(self):
         try:
-            self.ui.Show()
+            self.ui.show()
         except:
             self._create_ui()
-            self.ui.Show()
+            self.ui.show()
 
     def _onSelectObjects(self, sender,e):
         sel = rs.SelectedObjects()
@@ -381,32 +431,40 @@ class Engine():
             if self.ui:
                 self.ui.rules.tb_guid.Text='selection empty'
 
+    def _hide_rhino_object(self,id):
+        self._hidden_rhino_objects.append(id)
+        rs.HideObject(id)
+
     def _hide_all(self):
         for o in self.data:
             o.hide()
 
     def _delete_all(self):
         for o in self.data:
-            if isinstance(o,Geometry):
                 o.delete()
-            else:
-                try:
-                    rs.select(o)
-                except:
-                    pass
+
+    def unstage_name(self,name):
+        objs=ENGINE.get_by_name(name)
+        for o in objs:
+            o.unstage()
 
     def _slider_value_changed(self,value):
         #print('_slider_value_changed step:{}'.format(value))
         index=int(value)
         self.ui.rules.tb_rules.Text = self._format_step_text(index+1)
+        #following lines are for RulePanel2
+        # if len(self.ui.rules.pn_rules.Content.Items)>=value:
+        #     try:
+        #         self.ui.rules.pn_rules.Content.Items.RemoveAt(value-1)
+        #     except:
+        #         print('fail to remove')
 
         if self._enable_redraw:
             rs.EnableRedraw(False)
             self._hide_all()
             rs.ShowObjects(self.step_geometry[index])
             rs.EnableRedraw(True)
-        #self.ui.tb_rules.Text=str(value)
-        #self.ui.tb_rules.Text='changed'
+
 
     def _snap_shot(self):
         pass
@@ -421,22 +479,19 @@ class Engine():
 
     def clear_doc(self):
         self._delete_all()
-        for v in ENGINE._imported_components.values():
-            objs=rs.ObjectsByGroup(v['group'])
-            rs.DeleteObjects(objs)
+        self.delete_imported_components()
 
-        for o in ENGINE.data:
-            try:
-                o.delete()
-            except:
-                print('cant delete {}'.format(o))
-
-        trash = rs.ObjectsByLayer(GENLAYER)
-        if len(trash) > 0:
-            rs.DeleteObjects(trash)
-        rs.DeleteLayer(GENLAYER)
+        rs.CurrentLayer('Default')
         rs.PurgeLayer(GENLAYER)
         rs.AddLayer(GENLAYER)
+        rs.CurrentLayer(GENLAYER)
+
+    def delete_imported_components(self):
+        for v in self._imported_components.values():
+            print('deleting {}'.format(v))
+            objs=rs.ObjectsByGroup(v['group'])
+            rs.DeleteObjects(objs)
+        self._imported_components={}
 
     def enable_redraw(self,flag=True):
         rs.EnableRedraw(flag)
@@ -482,8 +537,14 @@ class Engine():
             elif isinstance(o,Geometry) and o._staged and o._visible:
                     current_objs.append(o.guid)
         self.step_geometry.append(current_objs)
+
+        # UI operations
+
+        #following line is for RulePanel2
+        #self.ui.rules.add_rule('asd')
         self.ui.rules.slider.Value=self.step
         self.ui.rules.slider.MaxValue=self.step
+
         self.step+=1
 
     def add_imported_component(self,name,rhinogroup,w,h):
@@ -517,7 +578,7 @@ class Engine():
     def add_multiple(self, objs):
         self.data += objs
 
-    def delete(self, obj):
+    def unstage_object(self, obj):
         #print('ENGINE.delete start')
         if isinstance(obj,GeoGroup):
             objs=obj._components
@@ -525,6 +586,16 @@ class Engine():
                 o.unstage()
         else:
             obj.unstage()
+
+    def unstage_objects(self, objs):
+        #print('ENGINE.delete start')
+        for obj in objs:
+            if isinstance(obj,GeoGroup):
+                objs=obj._components
+                for o in objs:
+                    o.unstage()
+            else:
+                obj.unstage()
 
     def print_data(self):
         for o in self.data:
@@ -562,11 +633,13 @@ class Engine():
                 #print('unable to delete {}'.format(o.name))
                 pass
 
+
     def delete_name(self, name):
         for o in self.data:
             if o.name == name:
                 if isinstance(o, Geometry):
-                    self.delete(o)
+                    #self.delete(o)
+                    o.delete()
                 # elif isinstance(o, NameGroup):
                 #     for n in o.names:
                 #         delete_name(n)
@@ -581,20 +654,17 @@ class Engine():
         self.data[index] = obj
 
     def rename(self, name, out_name):
-        objs, indice = self.get_by_name(name, return_index=True)
+        objs= self.get_by_name(name)
         basket = []
         for o in objs:
             o.name = out_name
+            #TODO: check other types such as groups for renaming
+            try:
+                rs.ObjectName(o.guid,out_name)
+            except:
+                pass
             basket.append(o)
         return basket
-
-
-try:
-    type(ENGINE)
-    #ENGINE.ui.show()
-except:
-    ENGINE = Engine()
-
 
 def _str_vects(vects):
     txt = ''
@@ -631,6 +701,7 @@ def colorize(name=None,color=None):
 
 
 def enable_redraw(flag):
+    ENABLEDARAW=flag
     ENGINE.enable_redraw(flag)
 
 def clear_doc():
@@ -642,8 +713,11 @@ def empty_trash():
 def delete_name(name):
     ENGINE.delete_name(name)
 
+def unstage_name(name):
+    ENGINE.unstage_name(name)
+
 def rename(name,out_name):
-    ENGINE.rename(name,out_name)
+    return ENGINE.rename(name,out_name)
 
 def add_rhino_box(name,given_name=None):
     objs = rs.ObjectsByName(name)
@@ -671,7 +745,7 @@ def add_rhino_box(name,given_name=None):
             else:
                 iname=name
             box=create_box(size,position,vects,iname)
-            rs.HideObject(id)
+            ENGINE._hide_rhino_object(id)
 
 
 
@@ -770,10 +844,10 @@ def divide(name, divs=[0.5, 0.5], out_names=['box_A'],
             pass
 
     if delete_input:
-        ENGINE.delete_objects(objs)
+        ENGINE.unstage_objects(objs)
     else:
         for o in objs:
-            rs.HideObject(o.guid)
+            o.hide()
 
     if TAKESNAPSHOTS:
         ENGINE._snap_shot()
@@ -782,10 +856,11 @@ def divide(name, divs=[0.5, 0.5], out_names=['box_A'],
     return out_guid
 
 def divide_u_count(name, divs, out_name):
+
     pass
 def divide_face_u(name, width, stretch=False):
     pass
-def divide_face_uv(name, width, height, out_name, stretch=True):
+def divide_face_uv(name, width, height, out_name, stretch_u=True, stretch_v=True):
     objs, indice = ENGINE.get_by_name(name, return_index=True)
     basket = []
     for o in objs:
@@ -796,8 +871,9 @@ def divide_face_uv(name, width, height, out_name, stretch=True):
         # U: u_vect
         # V: v_vect
         if height:
-            count_v = int( round (H / height) )
-            div_h = H / count_v
+            if stretch_v:
+                count_v = int( round (H / height) )
+                div_h = H / count_v
         else:
             count_v= 1
             div_h = H
@@ -830,7 +906,7 @@ def divide_face_uv(name, width, height, out_name, stretch=True):
         o.unstage()
 
         #rs.ShowObjects(faces)
-
+    ENGINE.add_step('{} -> divide_face_uv -> {}'.format(name,out_name))
     #pass
 
 def divide_x(name, divs, out_name, ratio_mode=None, delete_input=True):
@@ -880,6 +956,21 @@ def divide_z(name, divs, out_name, ratio_mode=None, delete_input=True):
 
     ENGINE.add_step('{} -> divide_z ->{}:{}'.format(name,out_name,len(out_guid)))
 
+
+def _divide_eq(name,w,out_names,direction='z'):
+    objs=ENGINE.get_by_name(name)
+    for o in objs:
+        divs=[]
+        if direction=='z':
+            count=round(o.size[2]/w)
+            aw=o.size[2]/count
+            divs=[]
+            for i in range(count):
+                divs.append(aw)
+        _divide_object(ENGINE,o,divs,out_names,direction,ratio_mode=False,)
+    ENGINE.add_step('{} -> divide_eq ->{}'.format(name,out_names))
+
+
 def divide_mx(name,div,out_names,ratio_mode=True):
     _divide_mirror(name,div,out_names,'x',ratio_mode)
 
@@ -908,7 +999,7 @@ def _divide_mirror(name,div,out_names,direction='x',
         basket=_divide_object(ENGINE, o, divs, tempnames, direction, ratio_mode)
         basket[-1].invert(direction, copy=False)
 
-        ENGINE.delete(o)
+        ENGINE.unstage_object(o)
         #o.unstage()
         #print(str(basket[-1]))
 
@@ -939,6 +1030,7 @@ def _invert(name, direction='x'):
 
 
 
+
 def scale(name, scales, alignment=Align.NW, out_name=None):
     objs, indice = ENGINE.get_by_name(name, return_index=True)
     basket = []
@@ -951,7 +1043,7 @@ def scale(name, scales, alignment=Align.NW, out_name=None):
             shape = _scale(o, scales, alignment)
             if out_name is None:
                 adj_out_name=name
-                ENGINE.delete(o)
+                ENGINE.unstage_object(o)
                 #o.unstage()
                 #rs.HideObject(o.guid)
             else:
@@ -1011,10 +1103,16 @@ def _scale(obj, scales, alignment=Align.NW, size=None):
     # print('centered:', centered, list(org))
     pos = org
     vects = [u, v, w]
-    if not size:
+    if size:
+        scales=Vector3d(size[0] / o.size[0],
+                        size[1] / o.size[1],
+                        size[2] / o.size[2],
+                        )
+    else:
         size = Vector3d(o.size[0] * scales[0],
                         o.size[1] * scales[1],
                         o.size[2] * scales[2])
+
     # print('ps size:{}'.format(size))
     # print('pos=',pos)
     ref = [o.position, o.position+o.vects[0]]
@@ -1106,21 +1204,99 @@ def scale_z(name, scale_num, alignment=Align.NW, out_name=None):
 def decompose(name,out_names=['*_SN,*_EW']):
     pass
 
-def extract_face(name,direction='S',out_name=None):
+def extract_face(name,direction='S',out_name=None,add_step=True):
     if out_name is None:
         out_name=name+'_face_'+direction
     objs = ENGINE.get_by_name(name)
+    basket=[]
     for o in objs:
         faces=o.extract_face(direction)
         for f in faces:
             f.name=out_name
             rs.ObjectName(f.guid,out_name)
             ENGINE.add(f)
-    ENGINE.add_step('{} -> extract face {} ->{}'.format(name, direction,out_name))
+            basket.append((f))
+    if add_step:
+        ENGINE.add_step('{} -> extract face {} ->{}'.format(name, direction,out_name))
+    return basket
 
+def decompose_2(name, out_names=['H','V'], name_as_prefix=True):
+    if len(out_names)<2:
+        print('please give at lease 2 names or leave as default')
+    faces=_decompose_sides(name)
+    for i in range(len(out_names)):
+        if name_as_prefix:
+            out_names[i] = '{}_{}'.format(name,out_names[i])
 
+    for s in ['T','B']:
+        rename('{}_{}'.format(name,s),out_names[0])
+    for s in ['S','N','W','E']:
+        rename('{}_{}'.format(name,s),out_names[1])
+    ENGINE.add_step('{}-> decompose ->{}'.format(name,out_names))
 
-def component_on_face(facename,compname):
+def decompose_3(name, out_names=['SIDES','TOP','BOT'], name_as_prefix=True):
+    if len(out_names)<3:
+        print('please give at lease 3 names or leave as default')
+
+    _decompose_sides(name)
+    for i in range(len(out_names)):
+        if name_as_prefix:
+            out_names[i] = '{}_{}'.format(name,out_names[i])
+
+    for s in ['S','N','W','E']:
+        ENGINE.rename('{}_{}'.format(name,s),out_names[0])
+    ENGINE.rename('{}_{}'.format(name, 'top'), out_names[1])
+    ENGINE.rename('{}_{}'.format(name, 'bot'), out_names[2])
+    ENGINE.add_step('{}-> decompose ->{}'.format(name, out_names))
+
+def decompose_4(name, out_names=['SN','EW','top','bot'], name_as_prefix=True):
+    if len(out_names)<4:
+        print('please give at lease 4 names or leave as default')
+    _decompose_sides(name)
+    for i in range(len(out_names)):
+        if name_as_prefix:
+            out_names[i] = '{}_{}'.format(name,out_names[i])
+    sides=[['S','N'],['E','W'],['T'],['B']]
+    for i in range(len(sides)):
+        for s in sides[i]:
+            print('{}_{}'.format(name,s),'->',out_names[i])
+            ENGINE.rename('{}_{}'.format(name,s),out_names[i])
+    ENGINE.add_step('{}-> decompose ->{}'.format(name, out_names))
+
+def decompose(name, out_names=['S','N','W','E','top','bot'], name_as_prefix=True):
+    if len(out_names)<6:
+        print('please give at lease 6 names or leave as default')
+    _decompose_sides(name)
+    for i in range(len(out_names)):
+        if name_as_prefix:
+            out_names[i] = '{}_{}'.format(name,out_names[i])
+    sides = ['S', 'N', 'E', 'W', 'T', 'B']
+    for i in range(len(sides)):
+        s=sides[i]
+        ENGINE.rename('{}_{}'.format(name, s), out_names[i])
+    ENGINE.add_step('{}-> decompose ->{}'.format(name, out_names))
+
+def _decompose_sides(name,sides=['S','N','W','E','T','B'],out_names=None,unstage_input=True):
+    if out_names is None:
+        out_names = sides
+    for i in range(len(out_names)):
+        out_names[i]=name+'_'+out_names[i]
+
+    faces={}
+    for s,oname in zip(sides,out_names):
+        faces[s]=extract_face(name,s,oname,add_step=False)
+    if unstage_input:
+        print('unstaging {}'.format(name))
+        ENGINE.unstage_name(name)
+    return faces
+
+def unstage_components(name):
+    pass
+
+def component_on_face(facename,compname,out_name='terminal'):
+    if facename in ENGINE._mapped_components:
+        ENGINE._mapped_components[facename].unstage()
+
     group,w,h=ENGINE.get_imported_component(compname)
     faceobjs=ENGINE.get_by_name(facename)
     output=[]
@@ -1134,6 +1310,8 @@ def component_on_face(facename,compname):
     newgroup = rs.AddGroup()
     rs.AddObjectsToGroup(output,newgroup)
     ggroup=GeoGroup(newgroup)
+    ggroup.name=out_name
+    ENGINE._mapped_components[facename]=ggroup
     ENGINE.add(ggroup)
     ENGINE.add_step('{} -> is mapped to ->{}'.format(facename, compname))
 
@@ -1226,28 +1404,39 @@ def duplicate(name,out_name,transform=[0,0,0]):
             dups.append(dup)
     ENGINE.add_step('{} -> duplicate ->{}:{}'.format(name, out_name, len(dups)))
     return dups
-def start():
-    rs.CurrentLayer(GENLAYER)
-    enable_redraw(False)
-    rs.EnableRedraw(False)
-    clear_doc()
-    ENGINE.add_step('start')
 
 def reset():
-    rs.CurrentLayer(GENLAYER)
-    enable_redraw(False)
-    rs.EnableRedraw(False)
-    clear_doc()
-    ENGINE._reset()
-    ENGINE.show_ui()
-    ENGINE.add_step('start')
+    global ENGINE
+    SAVEFILENAME = None
+    ENABLEDARAW=False
 
+    try:
+        ENGINE.ui.Close()
+    except Exception as e: print(e)
+
+    try:
+        enable_redraw(False)
+        clear_doc()
+        ENGINE._reset()
+    except:
+        ENGINE = Engine()
+
+    rs.CurrentLayer(GENLAYER)
+    rs.EnableRedraw(True)
+    ENABLEDARAW=True
+    ENGINE.show_ui()
+    #enable_redraw(True)
+    #ENGINE.add_step('start')
+
+def start():
+    enable_redraw(False)
 
 def end():
     ENGINE.add_step('end')
     ENGINE._dettach_rhino_events()
     enable_redraw(True)
     rs.EnableRedraw(True)
+    #ENGINE.show_ui()
 
 def hide_name(name):
     sel = ENGINE.get_by_name(name)
@@ -1285,7 +1474,7 @@ def _move(name,transform=[0,0,0],out_name=None, ratio_mode=False):
         if out_name:
             dup.name = out_name
 
-        ENGINE.delete(o)
+        ENGINE.unstage_object(o)
 
 
 def set_x(name,num,alignment=Align.NW):
@@ -1315,7 +1504,7 @@ def _set_size(name,x=None,y=None,z=None,alignment=Align.NW):
             z = o.size[2]
         print(x,y,z)
         shape=_scale(o,None,alignment,size=Vector3d(x,y,z))
-        ENGINE.delete(o)
+        ENGINE.unstage_object(o)
         shape.name=name
         ENGINE.add(shape)
     return basket

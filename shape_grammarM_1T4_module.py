@@ -34,7 +34,6 @@ def T4(name,out_names=['f_ebed','f_sbed','f_lvg','f_bath']):
     sg.extract_face(s+'sbed','W',out_names[1])
     sg.extract_face(s+'lvg','S',out_names[2])
     sg.extract_face(s+'bath','W',out_names[3])
-    
 
 
     sg.ADDSTEPS=True

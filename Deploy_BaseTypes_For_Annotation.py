@@ -210,7 +210,7 @@ class PhaseObject():
             self.parent.remove_child(self)
         if self.children:
             for c in self.children:
-                c.delete()
+                c.unstage()
         if self.guid is not None:
             if rs.IsObject(self.guid):
                 rs.DeleteObject(self.guid)
