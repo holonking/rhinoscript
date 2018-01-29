@@ -116,10 +116,11 @@ def addMeshQuad(verts):
     return mesh
 
 def meshExtrudePolyByVect(poly, vect, colorRow=None):
+
     pts = rs.CurveEditPoints(poly)
     meshExtrudePtsByVect(pts, vect, colorRow)
 
-def meshExtrudePtsByVect(pts, vect, colorRow=None):
+def meshExtrudePtsByVect(pts, vect, colorRow=None, add_doc=False):
     extrudeVect = vect
     # rs.AddPoints(pts)
     meshes = []

@@ -39,7 +39,7 @@ class Geometry():
         #    self.name, self.position,self.size,self.vects[0],self.guid)
 
     def print_tree(self,level=0):
-        prefix='        '*level
+        prefix='    '*level
         print(prefix+str(self))
         for c in self.children:
             c.print_tree(level+1)
@@ -258,6 +258,7 @@ class Engine():
         basket=[]
         for o in objs:
             dup=self.create_box(o.position,o.vects,o.size,out_name)
+            dup.set_parent(o)
             basket.append(dup)
         return basket
 

@@ -84,7 +84,8 @@ class Geometry():
         self._set_color(value)
 
     def __str__(self):
-        return '{}<vects:({},{})>'.format(self.name, _str_vects(self.vects), list(self.size))
+        return '{}'.format(self.name)
+        #return '{}<vects:({},{})>'.format(self.name, _str_vects(self.vects), list(self.size))
         # return '{}<pos:({}),size:{},vectsu:({}),id:{}>'.format(
         #    self.name, self.position,self.size,self.vects[0],self.guid)
 
@@ -909,6 +910,19 @@ def divide_face_uv(name, width, height, out_name, stretch_u=True, stretch_v=True
     ENGINE.add_step('{} -> divide_face_uv -> {}'.format(name,out_name))
     #pass
 
+def box_on_face_center(facename,u,v,w,out_name):
+    objs = ENGINE.get_by_name(facename)
+    basket = []
+    for o in objs:
+        mesh = rs.coercemesh(o.guid)
+        center=(mesh.Vertices[0]+mesh.Vertices[1])
+        center=Point3d(center.X,center.Y,center.Z)*0.5
+        center -= Point3d(u/2,-v/4,0)
+        create_box(Vector3d(u,v,w),center,name=out_name)
+
+        basket.append(center)
+    return basket
+
 def divide_x(name, divs, out_name, ratio_mode=None, delete_input=True):
     if ratio_mode is None:
         if divs[0] > 1:
@@ -1050,6 +1064,7 @@ def scale(name, scales, alignment=Align.NW, out_name=None):
                 adj_out_name=out_name
 
             shape.name=adj_out_name
+            shape.set_parent(o)
             rs.ObjectName(shape.guid,adj_out_name)
             #why without the line below can create geometries?
             #ENGINE.add(shape)
@@ -1123,6 +1138,7 @@ def _scale(obj, scales, alignment=Align.NW, size=None):
     dup = rs.OrientObject(dup,trg,ref)
     geo = Geometry(dup,o.position,vects,size)
     geo.move(org-o.position)
+    geo.set_parent(o)
     ENGINE.add(geo)
     return geo
 
@@ -1589,11 +1605,7 @@ def _divide_object(engine, obj, divs, out_names, direction='x', ratio_mode=True,
         dupo=_scale(o,scales,Align.SW)
         dupo.move(trans)
         dupo.name=oname
-        # pos = o.position + Vector3d(trans[0], trans[1], trans[2])
-        # box = create_box(Vector3d(size[0], size[1], size[2]), pos, o.vects, oname)
-        # box.set_parent(o)
-        # basket.append(box)
-        dupo.set_parent(o)
+        #dupo.set_parent(o)
         basket.append(dupo)
     return basket
 

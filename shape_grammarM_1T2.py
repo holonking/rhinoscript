@@ -42,5 +42,8 @@ def gen():
 gen()
 
 
-sg.end()
+eg=sg.ENGINE
+for o in eg.data:
+    if o._parent is None:
+        o.print_tree()
 

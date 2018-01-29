@@ -28,6 +28,9 @@ def gen():
     sg.divide_my('ebed_s',0.5,['ebed','sbed'])
     sg.scale_y('lvg',0.9)
 
+    sg.extract_face('D','S','f_lvg')
+    sg.extract_face('B','S','f_ebed')
+    sg.extract_face('C','S','f_sbed')   
 
     #facade details
     sg.extract_face('ebed','S','f_ebed')
